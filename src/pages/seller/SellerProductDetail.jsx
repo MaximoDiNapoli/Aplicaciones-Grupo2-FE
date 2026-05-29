@@ -1,15 +1,19 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { SellerLayout, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
+import { useToast } from '../../store/toast'
 import { sellerProductDetail as p } from '../../data/mock'
 
 // Detalle de Producto (vendedor): galería + estructura de precio, inventario y rendimiento.
 function SellerProductDetail() {
   const [active, setActive] = useState(0)
+  const navigate = useNavigate()
+  const notify = useToast()
+  const remove = () => { notify('Producto eliminado'); navigate('/vendedor/inventario') }
   return (
     <SellerLayout active="inventario">
       <div className="dash-pagetitle dash-pagetitle--form">
@@ -18,9 +22,9 @@ function SellerProductDetail() {
           <h1 className="dash-pagetitle__title">{p.name} <Pill tone={pillTone(p.status)}>{cap(p.status)}</Pill></h1>
         </div>
         <div className="dash-pagetitle__actions">
-          <Button variant="outline" iconLeft="trash">Eliminar</Button>
-          <Button variant="outline" iconLeft="box">Duplicar</Button>
-          <Button iconLeft="pencil">Editar</Button>
+          <Button variant="outline" iconLeft="trash" onClick={remove}>Eliminar</Button>
+          <Button variant="outline" iconLeft="box" onClick={() => notify('Producto duplicado')}>Duplicar</Button>
+          <Button iconLeft="pencil" onClick={() => navigate('/vendedor/inventario/nuevo')}>Editar</Button>
         </div>
       </div>
 

@@ -4,13 +4,15 @@ import { SellerLayout } from '../../components/dashboard/shells'
 import { TextInput, Select } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
+import { useToast } from '../../store/toast'
 import { categories } from '../../data/mock'
 
 // Crear Producto (pantalla separada del listado). Form + uploader + preview de precio.
 function SellerCreateProduct() {
   const navigate = useNavigate()
+  const notify = useToast()
   const [discount, setDiscount] = useState(false)
-  const save = () => navigate('/vendedor/inventario')
+  const save = () => { notify('Producto guardado'); navigate('/vendedor/inventario') }
 
   return (
     <SellerLayout active="inventario">
@@ -57,14 +59,14 @@ function SellerCreateProduct() {
         <aside className="create-grid__side">
           <section className="form-card">
             <h2 className="form-card__title">Imágenes del Producto</h2>
-            <div className="uploader">
+            <button type="button" className="uploader" onClick={() => notify('Selector de archivos (demo)')}>
               <Icon name="upload" size={34} strokeFill className="uploader__icon" />
               <p><strong>Haz clic para subir</strong> o arrastra y suelta</p>
               <span className="uploader__hint">SVG, PNG, JPG (Máx. 5MB)</span>
-            </div>
+            </button>
             <div className="uploader__thumbs">
               <div className="uploader__thumb"><Icon name="image" size={22} strokeFill /></div>
-              <div className="uploader__thumb uploader__thumb--add"><Icon name="plus" size={20} strokeFill /></div>
+              <button type="button" className="uploader__thumb uploader__thumb--add" onClick={() => notify('Selector de archivos (demo)')}><Icon name="plus" size={20} strokeFill /></button>
             </div>
           </section>
 

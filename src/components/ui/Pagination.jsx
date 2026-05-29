@@ -1,9 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Hook de paginación local: corta un array y expone los metadatos de la página actual.
-export function usePager(items, pageSize) {
+// resetKey: cuando cambia (p. ej. al aplicar un filtro) vuelve a la página 1.
+export function usePager(items, pageSize, resetKey) {
   const [page, setPage] = useState(1)
+  // Reset a la página 1 cuando cambia el filtro (resetKey).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setPage(1) }, [resetKey])
   const total = items.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const current = Math.min(page, totalPages)

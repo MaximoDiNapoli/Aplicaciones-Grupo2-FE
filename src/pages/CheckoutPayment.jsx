@@ -4,7 +4,7 @@ import CheckoutSummaryPanel from '../components/common/CheckoutSummaryPanel'
 import { TextInput, Checkbox } from '../components/ui/Field'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
-import { checkoutSummary } from '../data/mock'
+import { useCart, buildCheckoutSummary } from '../store/cart'
 
 const methods = [
   { id: 'tarjeta', label: 'Tarjeta de Crédito / Débito', icon: 'card' },
@@ -16,7 +16,8 @@ const methods = [
 function CheckoutPayment() {
   const [method, setMethod] = useState('tarjeta')
   const [save, setSave] = useState(true)
-  const summary = { ...checkoutSummary, subtotal: 83, shipping: 5, total: 88 }
+  const { items, subtotal } = useCart()
+  const summary = buildCheckoutSummary(items, subtotal)
 
   return (
     <CheckoutLayout step={2}>

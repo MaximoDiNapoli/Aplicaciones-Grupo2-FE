@@ -4,11 +4,14 @@ import CheckoutSummaryPanel from '../components/common/CheckoutSummaryPanel'
 import { TextInput } from '../components/ui/Field'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
-import { addresses, checkoutSummary } from '../data/mock'
+import { useCart, buildCheckoutSummary } from '../store/cart'
+import { addresses } from '../data/mock'
 
 // Checkout paso 1: dirección de envío.
 function CheckoutShipping() {
   const [selected, setSelected] = useState('casa')
+  const { items, subtotal } = useCart()
+  const checkoutSummary = buildCheckoutSummary(items, subtotal)
   return (
     <CheckoutLayout step={1}>
       <div className="checkout-grid">

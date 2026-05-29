@@ -6,10 +6,12 @@ import ProductImage from '../components/product/ProductImage'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
+import { useToast } from '../store/toast'
 import { orderDetail as o } from '../data/mock'
 
 // Detalle de Compra: estado, items, totales, dirección y método de pago.
 function OrderDetail() {
+  const notify = useToast()
   return (
     <div className="page">
       <PublicHeader />
@@ -22,7 +24,7 @@ function OrderDetail() {
             <h1 className="order-detail__id">Orden #{o.id}</h1>
             <p className="order-detail__date">Realizada el {o.date}</p>
           </div>
-          <Button iconLeft="download">Descargar Factura</Button>
+          <Button iconLeft="download" onClick={() => notify(`Descargando factura de la orden #${o.id}…`)}>Descargar Factura</Button>
         </div>
 
         <section className="card order-status">

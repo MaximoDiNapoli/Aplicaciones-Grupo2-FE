@@ -353,22 +353,22 @@ export const adminPaymentProviders = [
 ]
 
 const seedAdminGlobalSales = [
-  { id: '9021', date: '24 Oct 2023, 14:30', customer: 'Carlos Mendoza', seller: 'Sweet Tooth Mx', total: 1250.0, commission: 125.0, status: 'pagado' },
-  { id: '9020', date: '24 Oct 2023, 11:15', customer: 'Ana García', seller: 'Candy Corp', total: 890.5, commission: 89.05, status: 'rechazado' },
-  { id: '9019', date: '23 Oct 2023, 18:45', customer: 'Luis Herrera', seller: 'Gomitas Locas SA', total: 3400.0, commission: 340.0, status: 'pendiente' },
-  { id: '9018', date: '23 Oct 2023, 09:20', customer: 'Elena Rojas', seller: 'Sweet Tooth Mx', total: 450.0, commission: 45.0, status: 'pagado' },
-  { id: '9017', date: '22 Oct 2023, 16:05', customer: 'Pablo Núñez', seller: 'Candy Corp', total: 1780.0, commission: 178.0, status: 'pagado' },
-  { id: '9016', date: '22 Oct 2023, 10:40', customer: 'Sofía Castro', seller: 'Gomitas Locas SA', total: 620.0, commission: 62.0, status: 'pendiente' },
+  { id: '9021', date: '24 Oct 2023, 14:30', customer: 'Carlos Mendoza', seller: 'Sweet Tooth Mx', method: 'Tarjeta', total: 1250.0, commission: 125.0, status: 'pagado' },
+  { id: '9020', date: '24 Oct 2023, 11:15', customer: 'Ana García', seller: 'Candy Corp', method: 'PayPal', total: 890.5, commission: 89.05, status: 'rechazado' },
+  { id: '9019', date: '23 Oct 2023, 18:45', customer: 'Luis Herrera', seller: 'Gomitas Locas SA', method: 'Transferencia', total: 3400.0, commission: 340.0, status: 'pendiente' },
+  { id: '9018', date: '23 Oct 2023, 09:20', customer: 'Elena Rojas', seller: 'Sweet Tooth Mx', method: 'Tarjeta', total: 450.0, commission: 45.0, status: 'pagado' },
+  { id: '9017', date: '22 Oct 2023, 16:05', customer: 'Pablo Núñez', seller: 'Candy Corp', method: 'PayPal', total: 1780.0, commission: 178.0, status: 'pagado' },
+  { id: '9016', date: '22 Oct 2023, 10:40', customer: 'Sofía Castro', seller: 'Gomitas Locas SA', method: 'Transferencia', total: 620.0, commission: 62.0, status: 'pendiente' },
 ]
 export const adminGlobalSales = cycle(seedAdminGlobalSales, 13, (i) => String(9021 - i))
 
 const seedAdminProducts = [
-  { id: 'gom-001', name: 'Gomitas Ácidas Arcoíris', sku: 'GOM-001', category: 'Gomitas', seller: 'Dulcería El Oasis', price: 4.5, status: 'publicado', g: ['#ff8c42', '#c0265e'] },
-  { id: 'cho-092', name: 'Trufas de Cacao 70%', sku: 'CHO-092', category: 'Chocolates', seller: 'Cacao Fino Ltda.', price: 18.0, status: 'pendiente', g: ['#7a4a2a', '#3d2414'] },
-  { id: 'car-014', name: 'Caramelos de Menta Finos', sku: 'CAR-014', category: 'Caramelos', seller: 'Dulcería El Oasis', price: 6.25, status: 'publicado', g: ['#9bcf6a', '#5e8a2f'] },
-  { id: 'mal-007', name: 'Malvaviscos de Fresa', sku: 'MAL-007', category: 'Malvaviscos', seller: 'Nube Dulce', price: 5.0, status: 'publicado', g: ['#ffd6e4', '#ff8fb6'] },
-  { id: 'cho-110', name: 'Bombones Rellenos', sku: 'CHO-110', category: 'Chocolates', seller: 'Cacao Fino Ltda.', price: 22.0, status: 'pendiente', g: ['#a8607d', '#6e3a52'] },
-  { id: 'gom-045', name: 'Gusanos de Goma', sku: 'GOM-045', category: 'Gomitas', seller: 'Gomitas Locas SA', price: 3.75, status: 'publicado', g: ['#c6e86a', '#7aa82f'] },
+  { id: 'gom-001', name: 'Gomitas Ácidas Arcoíris', sku: 'GOM-001', category: 'Gomitas', seller: 'Dulcería El Oasis', price: 4.5, status: 'publicado', stock: 'En stock', g: ['#ff8c42', '#c0265e'] },
+  { id: 'cho-092', name: 'Trufas de Cacao 70%', sku: 'CHO-092', category: 'Chocolates', seller: 'Cacao Fino Ltda.', price: 18.0, status: 'pendiente', stock: 'Bajo', g: ['#7a4a2a', '#3d2414'] },
+  { id: 'car-014', name: 'Caramelos de Menta Finos', sku: 'CAR-014', category: 'Caramelos', seller: 'Dulcería El Oasis', price: 6.25, status: 'publicado', stock: 'En stock', g: ['#9bcf6a', '#5e8a2f'] },
+  { id: 'mal-007', name: 'Malvaviscos de Fresa', sku: 'MAL-007', category: 'Malvaviscos', seller: 'Nube Dulce', price: 5.0, status: 'publicado', stock: 'Agotado', g: ['#ffd6e4', '#ff8fb6'] },
+  { id: 'cho-110', name: 'Bombones Rellenos', sku: 'CHO-110', category: 'Chocolates', seller: 'Cacao Fino Ltda.', price: 22.0, status: 'pendiente', stock: 'En stock', g: ['#a8607d', '#6e3a52'] },
+  { id: 'gom-045', name: 'Gusanos de Goma', sku: 'GOM-045', category: 'Gomitas', seller: 'Gomitas Locas SA', price: 3.75, status: 'publicado', stock: 'Bajo', g: ['#c6e86a', '#7aa82f'] },
 ]
 export const adminProducts = cycle(seedAdminProducts, 12, (i, r) => (i < seedAdminProducts.length ? r.id : `${r.id}-${i}`))
 

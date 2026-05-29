@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { SellerLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
@@ -6,11 +7,24 @@ import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
 import { sellerProducts } from '../../data/mock'
 
+const productCats = ['Todas', ...new Set(sellerProducts.map((p) => p.category))]
+
 // Mis Productos (inventario). Flujo unificado: listado + CTA flotante "Crear Nuevo Producto"
 // que lleva a la pantalla de creación separada (corrección de la profesora #6).
 function SellerProducts() {
   const navigate = useNavigate()
-  const { page, setPage, total, totalPages, slice, from, to } = usePager(sellerProducts, 5)
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState('Todas')
+  const [status, setStatus] = useState('Todos')
+
+  const filtered = sellerProducts.filter((p) => {
+    if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false
+    if (cat !== 'Todas' && p.category !== cat) return false
+    if (status !== 'Todos' && p.status !== status.toLowerCase()) return false
+    return true
+  })
+  const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 5, `${q}|${cat}|${status}`)
+
   return (
     <SellerLayout active="inventario">
       <PageTitle title="Mis Productos" subtitle="Gestiona el inventario, precios y disponibilidad de tus artículos." />
@@ -18,11 +32,14 @@ function SellerProducts() {
       <div className="search-toolbar">
         <span className="search-toolbar__search">
           <Icon name="search" size={18} strokeFill />
-          <input placeholder="Filtrar por nombre de producto..." />
+          <input placeholder="Filtrar por nombre de producto..." value={q} onChange={(e) => setQ(e.target.value)} />
         </span>
-        <button className="select-btn">Categoría: Todas <Icon name="arrowRight" size={14} strokeFill style={{ transform: 'rotate(90deg)' }} /></button>
-        <button className="select-btn">Estado: Todos <Icon name="arrowRight" size={14} strokeFill style={{ transform: 'rotate(90deg)' }} /></button>
-        <button className="icon-square"><Icon name="sliders" size={18} /></button>
+        <select className="select-pill" value={cat} onChange={(e) => setCat(e.target.value)}>
+          {productCats.map((c) => <option key={c} value={c}>{c === 'Todas' ? 'Categoría: Todas' : c}</option>)}
+        </select>
+        <select className="select-pill" value={status} onChange={(e) => setStatus(e.target.value)}>
+          {['Todos', 'Activo', 'Inactivo'].map((s) => <option key={s} value={s}>{s === 'Todos' ? 'Estado: Todos' : s}</option>)}
+        </select>
       </div>
 
       <div className="adm-table">
@@ -39,10 +56,11 @@ function SellerProducts() {
             <span><Pill tone={pillTone(p.status)}>{cap(p.status)}</Pill></span>
             <span className="adm-actions ta-right">
               <Link to={`/vendedor/inventario/${p.id}`} className="icon-action" aria-label="Ver"><Icon name="eye" size={18} strokeFill /></Link>
-              <button className="icon-action" aria-label="Editar"><Icon name="pencil" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Editar" onClick={() => navigate('/vendedor/inventario/nuevo')}><Icon name="pencil" size={17} strokeFill /></button>
             </span>
           </div>
         ))}
+        {total === 0 && <div className="adm-table__empty">No hay productos que coincidan con los filtros.</div>}
         <div className="adm-table__foot">
           <span className="adm-muted">Mostrando {from} a {to} de {total} productos</span>
           <Pagination variant="mini" page={page} totalPages={totalPages} onChange={setPage} />

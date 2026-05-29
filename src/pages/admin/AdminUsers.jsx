@@ -1,32 +1,53 @@
+import { useState } from 'react'
 import { AdminLayout, PageTitle, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
+import { useToast } from '../../store/toast'
 import { adminUsers, adminPaymentProviders } from '../../data/mock'
 
 // Gestión de Usuarios + panel de Métodos de Pago (pasarelas).
 function AdminUsers() {
-  const { page, setPage, total, totalPages, slice, from, to } = usePager(adminUsers, 4)
+  const notify = useToast()
+  const [q, setQ] = useState('')
+  const [role, setRole] = useState('Todos los Roles')
+  const [status, setStatus] = useState('Todos los Estados')
+  const [users, setUsers] = useState(adminUsers)
+  const [providers, setProviders] = useState(adminPaymentProviders)
+
+  const removeUser = (id, name) => { setUsers((list) => list.filter((u) => u.id !== id)); notify(`Usuario ${name} eliminado`) }
+  const toggleProvider = (id) =>
+    setProviders((list) => list.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))
+
+  const filtered = users.filter((u) => {
+    const text = `${u.name} ${u.email} ${u.id}`.toLowerCase()
+    if (q && !text.includes(q.toLowerCase())) return false
+    if (role !== 'Todos los Roles' && u.role !== role) return false
+    if (status !== 'Todos los Estados' && u.status !== status.toLowerCase()) return false
+    return true
+  })
+  const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 4, `${q}|${role}|${status}`)
+
   return (
     <AdminLayout active="usuarios">
       <PageTitle
         title="Gestión de Usuarios"
         subtitle="Administra clientes y vendedores de la plataforma."
-        actions={<Button iconLeft="plus">Nuevo Usuario</Button>}
+        actions={<Button iconLeft="plus" onClick={() => notify('Formulario de nuevo usuario (demo)')}>Nuevo Usuario</Button>}
       />
 
       <div className="filter-fields">
         <label className="field"><span className="field__label">Buscar</span>
-          <span className="field__control field__control--icon"><Icon name="search" size={18} strokeFill className="field__icon" /><input className="field__input" placeholder="Nombre, email o ID" /></span>
+          <span className="field__control field__control--icon"><Icon name="search" size={18} strokeFill className="field__icon" /><input className="field__input" placeholder="Nombre, email o ID" value={q} onChange={(e) => setQ(e.target.value)} /></span>
         </label>
         <label className="field"><span className="field__label">Rol</span>
-          <span className="field__control field__control--select"><select className="field__input"><option>Todos los Roles</option><option>Cliente</option><option>Vendedor</option></select></span>
+          <span className="field__control field__control--select"><select className="field__input" value={role} onChange={(e) => setRole(e.target.value)}><option>Todos los Roles</option><option>Cliente</option><option>Vendedor</option></select></span>
         </label>
         <label className="field"><span className="field__label">Estado</span>
-          <span className="field__control field__control--select"><select className="field__input"><option>Todos los Estados</option><option>Activo</option><option>Suspendido</option></select></span>
+          <span className="field__control field__control--select"><select className="field__input" value={status} onChange={(e) => setStatus(e.target.value)}><option>Todos los Estados</option><option>Activo</option><option>Suspendido</option></select></span>
         </label>
         <label className="field"><span className="field__label">Fecha de Registro</span>
-          <span className="field__control"><input className="field__input" placeholder="mm/dd/yyyy" /></span>
+          <span className="field__control"><input className="field__input" type="date" /></span>
         </label>
       </div>
 
@@ -45,11 +66,12 @@ function AdminUsers() {
             <span>{u.activity}</span>
             <span><span className={`dot-status dot-status--${pillTone(u.status)}`} />{cap(u.status)}</span>
             <span className="adm-actions ta-right">
-              <button className="icon-action"><Icon name="pencil" size={17} strokeFill /></button>
-              <button className="icon-action"><Icon name="trash" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Editar" onClick={() => notify(`Editar a ${u.name} (demo)`)}><Icon name="pencil" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Eliminar" onClick={() => removeUser(u.id, u.name)}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
         ))}
+        {total === 0 && <div className="adm-table__empty">No hay usuarios que coincidan con los filtros.</div>}
         <div className="adm-table__foot">
           <span className="adm-muted">Mostrando {from} a {to} de {total} usuarios</span>
           <Pagination variant="mini" page={page} totalPages={totalPages} onChange={setPage} />
@@ -61,17 +83,25 @@ function AdminUsers() {
           <h2 className="dash-pagetitle__title" style={{ fontSize: 26 }}>Métodos de Pago</h2>
           <p className="dash-pagetitle__sub">Gestiona las pasarelas activas, comisiones y credenciales de API para la tienda.</p>
         </div>
-        <Button iconLeft="plus">Añadir Pasarela</Button>
+        <Button iconLeft="plus" onClick={() => notify('Añadir nueva pasarela (demo)')}>Añadir Pasarela</Button>
       </div>
       <div className="provider-grid">
-        {adminPaymentProviders.map((p) => (
+        {providers.map((p) => (
           <section className={`provider-card${p.enabled ? '' : ' is-off'}`} key={p.id}>
             <div className="provider-card__head">
               <span className="provider-card__name"><Icon name="card" size={20} strokeFill /> {p.name}</span>
-              <span className={`toggle${p.enabled ? ' is-on' : ''}`}><span className="toggle__knob" /></span>
+              <button
+                type="button"
+                className={`toggle${p.enabled ? ' is-on' : ''}`}
+                aria-pressed={p.enabled}
+                aria-label={`${p.enabled ? 'Desactivar' : 'Activar'} ${p.name}`}
+                onClick={() => toggleProvider(p.id)}
+              >
+                <span className="toggle__knob" />
+              </button>
             </div>
-            {p.enabled && <div className="provider-card__state"><span className="adm-muted">Estado</span><Pill tone="pink">Activo</Pill></div>}
-            <Button variant="outline" block iconLeft="lock">Editar Credenciales</Button>
+            <div className="provider-card__state"><span className="adm-muted">Estado</span><Pill tone={p.enabled ? 'pink' : 'neutral'}>{p.enabled ? 'Activo' : 'Inactivo'}</Pill></div>
+            <Button variant="outline" block iconLeft="lock" onClick={() => notify(`Editar credenciales de ${p.name} (demo)`)}>Editar Credenciales</Button>
           </section>
         ))}
       </div>

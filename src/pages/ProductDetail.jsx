@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import ProductImage from '../components/product/ProductImage'
 import ProductGrid from '../components/product/ProductGrid'
@@ -7,13 +8,28 @@ import { PriceDisplay, RatingStars, QuantityStepper } from '../components/ui/Mis
 import { Badge, Tag } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
+import { useCart } from '../store/cart'
 import { productDetail as p, reviews, products } from '../data/mock'
 
 // Detalle de producto: galería + ficha + reseñas + relacionados.
 function ProductDetail() {
+  const { addItem } = useCart()
+  const navigate = useNavigate()
   const [active, setActive] = useState(0)
   const [qty, setQty] = useState(1)
+  const [added, setAdded] = useState(false)
   const related = products.slice(0, 4)
+
+  const cartProduct = { ...p, g: p.gallery[active] }
+  const addToCart = () => {
+    addItem(cartProduct, qty)
+    setAdded(true)
+    setTimeout(() => setAdded(false), 1400)
+  }
+  const buyNow = () => {
+    addItem(cartProduct, qty)
+    navigate('/carrito')
+  }
 
   return (
     <PublicStoreLayout>
@@ -64,8 +80,10 @@ function ProductDetail() {
               <QuantityStepper value={qty} onChange={setQty} />
             </div>
             <div className="pdp__cta">
-              <Button size="lg" iconLeft="cart" block>Comprar ahora</Button>
-              <Button variant="outline" size="lg" iconLeft="cart" block>Agregar al carrito</Button>
+              <Button size="lg" iconLeft="cart" block onClick={buyNow}>Comprar ahora</Button>
+              <Button variant="outline" size="lg" iconLeft={added ? 'check' : 'cart'} block onClick={addToCart}>
+                {added ? '¡Agregado!' : 'Agregar al carrito'}
+              </Button>
             </div>
           </div>
         </div>

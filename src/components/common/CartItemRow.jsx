@@ -9,7 +9,7 @@ function CartItemRow({ item, onQtyChange, onRemove }) {
       <ProductImage g={item.g} className="cart-row__img" />
       <div className="cart-row__info">
         <div className="cart-row__name">{item.name}</div>
-        <div className="cart-row__variant">{item.variant}</div>
+        {item.variant && <div className="cart-row__variant">{item.variant}</div>}
       </div>
       <div className="cart-row__unit">{formatPrice(item.price)}</div>
       <QuantityStepper value={item.qty} onChange={(q) => onQtyChange?.(item.id, q)} />

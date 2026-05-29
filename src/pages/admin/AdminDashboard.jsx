@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { AdminLayout, PageTitle, StatCard, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Icon from '../../components/ui/Icon'
 import { adminStats, adminSalesTrend, adminSalesByCategory, adminActivity } from '../../data/mock'
@@ -44,7 +45,7 @@ function AdminDashboard() {
       </div>
 
       <section className="panel">
-        <div className="panel__head"><h2 className="panel__title">Actividad Reciente</h2><a className="adm-link">Ver todo</a></div>
+        <div className="panel__head"><h2 className="panel__title">Actividad Reciente</h2><Link to="/admin/ventas" className="adm-link">Ver todo</Link></div>
         <div className="adm-table">
           <div className="adm-table__head" style={{ gridTemplateColumns: '1fr 1.4fr 1.3fr 1fr 1fr 1fr' }}>
             <span>ID Transacción</span><span>Cliente / Usuario</span><span>Tipo de Actividad</span><span>Monto</span><span>Estado</span><span className="ta-right">Fecha</span>

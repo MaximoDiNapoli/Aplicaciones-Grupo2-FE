@@ -1,30 +1,40 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { SellerLayout, Pill, pillTone, cap } from '../../components/dashboard/shells'
+import { SellerLayout, Pill, pillTone } from '../../components/dashboard/shells'
 import OrderStatusStepper from '../../components/common/OrderStatusStepper'
 import ProductImage from '../../components/product/ProductImage'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
+import { useToast } from '../../store/toast'
 import { sellerOrderDetail as o } from '../../data/mock'
 
 // Detalle de Orden (vendedor): estado + cliente/envío/pago + artículos.
 function SellerOrderDetail() {
+  const notify = useToast()
+  const [step, setStep] = useState(o.currentStep)
+  const advance = () => {
+    if (step >= o.steps.length - 1) { notify('La orden ya está en el estado final'); return }
+    const next = step + 1
+    setStep(next)
+    notify(`Estado actualizado: ${o.steps[next].label}`)
+  }
   return (
     <SellerLayout active="ventas">
       <div className="dash-pagetitle dash-pagetitle--form">
         <div>
           <nav className="crumbs"><Link to="/vendedor/ventas"><Icon name="arrowLeft" size={13} strokeFill /> Volver a Ventas</Link></nav>
-          <h1 className="dash-pagetitle__title">Orden #{o.id} <Pill tone={pillTone(o.status)}>{cap(o.status)}</Pill></h1>
+          <h1 className="dash-pagetitle__title">Orden #{o.id} <Pill tone={pillTone(o.steps[step].id)}>{o.steps[step].label}</Pill></h1>
           <p className="dash-pagetitle__sub">Realizado el {o.date}</p>
         </div>
         <div className="dash-pagetitle__actions">
-          <Button variant="outline" iconLeft="printer">Imprimir</Button>
-          <Button iconLeft="refresh">Cambiar estado</Button>
+          <Button variant="outline" iconLeft="printer" onClick={() => window.print()}>Imprimir</Button>
+          <Button iconLeft="refresh" onClick={advance}>Cambiar estado</Button>
         </div>
       </div>
 
       <section className="form-card">
-        <OrderStatusStepper steps={o.steps} current={o.currentStep} />
+        <OrderStatusStepper steps={o.steps} current={step} />
       </section>
 
       <div className="sod-cards">
@@ -33,7 +43,7 @@ function SellerOrderDetail() {
           <div className="adm-strong">{o.customer.name}</div>
           <div className="adm-muted">{o.customer.email}</div>
           <div className="adm-muted">{o.customer.phone}</div>
-          <Button variant="outline" block iconLeft="mail" className="sod-contact">Contactar cliente</Button>
+          <Button href={`mailto:${o.customer.email}`} variant="outline" block iconLeft="mail" className="sod-contact">Contactar cliente</Button>
         </section>
         <section className="form-card">
           <h2 className="form-card__title"><Icon name="pin" size={18} strokeFill /> Dirección de Envío</h2>
