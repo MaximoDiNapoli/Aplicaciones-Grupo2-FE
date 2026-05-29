@@ -4,39 +4,41 @@ Checklist de vistas a implementar segun los PNG de Figma.
 
 ## Usuario final
 
-- [ ] Inicio
-- [ ] Catalogo
-- [ ] Detalle de producto
-- [ ] Carrito
-- [ ] Carrito vacio
-- [ ] Checkout - Envio
-- [ ] Checkout - Pago
-- [ ] Checkout - Resumen
-- [ ] Checkout - Confirmacion
-- [ ] Mis compras
-- [ ] Detalle de compra
-- [ ] Perfil
-- [ ] Registro
-- [ ] Login unificado
-- [ ] Pagina 404
-- [ ] Sin resultados
-
-
+- [x] Inicio
+- [x] Catalogo
+- [x] Detalle de producto
+- [x] Carrito
+- [x] Carrito vacio
+- [x] Checkout - Envio
+- [x] Checkout - Pago
+- [x] Checkout - Resumen
+- [x] Checkout - Confirmacion
+- [x] Mis compras
+- [x] Detalle de compra
+- [x] Perfil
+- [x] Registro
+- [x] Login unificado (sin seleccion manual de rol)
+- [x] Pagina 404
+- [x] Sin resultados
 
 ## Vendedor
 
-- [ ] Dashboard vendedor
-- [ ] Mis productos (inventario)
-- [ ] Crear producto
-- [ ] Detalle de producto (vendedor)
-- [ ] Mis ordenes (ventas)
-- [ ] Detalle de orden (vendedor)
-- [ ] Maquetar y hacer la vista de medio de pago (Checkout - Pago)
+- [x] Dashboard vendedor
+- [x] Mis productos (inventario) — flujo unificado: listado + CTA flotante "Crear Nuevo Producto"
+- [x] Crear producto (pantalla separada)
+- [x] Detalle de producto (vendedor)
+- [x] Mis ordenes (ventas)
+- [x] Detalle de orden (vendedor)
+- [x] Maquetar y hacer la vista de medio de pago (Checkout - Pago)
 
 ## Admin
 
-- [ ] Panel de control
-- [ ] Gestion de usuarios
-- [ ] Gestion de ventas
-- [ ] Gestion global de productos
-- [ ] Gestion de categorias
+- [x] Panel de control
+- [x] Gestion de usuarios
+- [x] Gestion de ventas
+- [x] Gestion global de productos
+- [x] Gestion de categorias
+
+> Nota: vendedor y admin reutilizan la **misma paleta de usuario** (corrección de la profesora).
+> El admin usa un sidebar charcoal (#2E3132, ya presente en la paleta) con acentos magenta/rosa,
+> en lugar del índigo/púrpura de los PNG originales.
