@@ -5,11 +5,41 @@ Tienda de dulces artesanales. Vite + React 19 + React Router 7. UI **solo deskto
 ## Cómo correrlo
 
 ```bash
-npm install      # si aún no instalaste dependencias
-npm run dev      # entorno de desarrollo (http://localhost:5173)
+npm install      # si aún no instalaste dependencias (solo la primera vez)
+npm run dev      # entorno de desarrollo
 npm run build    # build de producción
 npm run lint     # eslint
 ```
+
+Tras `npm run dev`, Vite imprime la URL local en la consola:
+
+```
+  ➜  Local:   http://localhost:5173/
+```
+
+Abrí esa dirección en el navegador (Vite usa el **puerto 5173** por defecto; si está ocupado
+elige el siguiente libre: 5174, 5175, …, así que mirá siempre la URL que aparece en la consola).
+Para detener el servidor, presioná `Ctrl + C` en la terminal.
+
+> El proyecto es **solo desktop**: mirá en una ventana ancha (≥ 1100 px).
+
+## Flujo de demo (login por rol y cierre de sesión)
+
+No hay backend: los datos son de demostración y la sesión se simula con la navegación.
+
+1. Entrá a **`/login`**. El rol **no se elige con tabs** (corrección de la profesora): el destino
+   se deduce de lo que escribas en el campo **Correo Electrónico** (simula el rol del token):
+
+   | Escribí… | Te lleva a | Pantalla |
+   | --- | --- | --- |
+   | `usuario` (o cualquier correo) | `/` | Tienda (usuario final) |
+   | `vendedor` | `/vendedor` | Panel de vendedor |
+   | `admin` | `/admin` | Panel de administrador |
+
+   La contraseña puede ser cualquier valor. Luego presioná **"Entrar al Safari"**.
+
+2. Para **cerrar sesión**, entrá a **`/perfil`** y usá el botón **"Cerrar Sesión"**
+   (junto a "Editar Perfil"), que te devuelve a `/login`.
 
 ## Vistas implementadas (usuario final)
 

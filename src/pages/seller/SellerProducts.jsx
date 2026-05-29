@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { SellerLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
 import Icon from '../../components/ui/Icon'
+import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
 import { sellerProducts } from '../../data/mock'
 
@@ -9,6 +10,7 @@ import { sellerProducts } from '../../data/mock'
 // que lleva a la pantalla de creación separada (corrección de la profesora #6).
 function SellerProducts() {
   const navigate = useNavigate()
+  const { page, setPage, total, totalPages, slice, from, to } = usePager(sellerProducts, 5)
   return (
     <SellerLayout active="inventario">
       <PageTitle title="Mis Productos" subtitle="Gestiona el inventario, precios y disponibilidad de tus artículos." />
@@ -27,7 +29,7 @@ function SellerProducts() {
         <div className="adm-table__head" style={{ gridTemplateColumns: '70px 1.6fr 1fr 0.8fr 1.1fr 0.9fr 0.9fr' }}>
           <span>Foto</span><span>Nombre</span><span>Categoría</span><span>Precio</span><span>Rendimiento</span><span>Estado</span><span className="ta-right">Acciones</span>
         </div>
-        {sellerProducts.map((p) => (
+        {slice.map((p) => (
           <div className="adm-table__row" key={p.id} style={{ gridTemplateColumns: '70px 1.6fr 1fr 0.8fr 1.1fr 0.9fr 0.9fr' }}>
             <ProductImage g={p.g} className="adm-thumb" />
             <span className="adm-strong">{p.name}</span>
@@ -42,11 +44,8 @@ function SellerProducts() {
           </div>
         ))}
         <div className="adm-table__foot">
-          <span className="adm-muted">Mostrando 1 a 3 de 128 productos</span>
-          <div className="mini-pager">
-            <button disabled>Anterior</button>
-            <button>Siguiente</button>
-          </div>
+          <span className="adm-muted">Mostrando {from} a {to} de {total} productos</span>
+          <Pagination variant="mini" page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </div>
 

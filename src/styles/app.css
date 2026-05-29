@@ -182,6 +182,9 @@
 .pagination__item { min-width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700; cursor: pointer; }
 .pagination__item:hover { border-color: var(--brand); color: var(--brand); }
 .pagination__item.is-active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.pagination__item:disabled { opacity: .4; cursor: not-allowed; }
+.pagination__item:disabled:hover { border-color: var(--line); color: var(--ink); }
+.pagination__ellipsis { min-width: 24px; text-align: center; color: var(--muted-soft); align-self: center; }
 
 /* ---------- Account sidebar / layout ---------- */
 .account-layout { flex: 1; display: grid; grid-template-columns: 264px 1fr; }

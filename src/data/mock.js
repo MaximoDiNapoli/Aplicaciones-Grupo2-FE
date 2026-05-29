@@ -95,6 +95,49 @@ export const products = [
     badge: { tone: 'mint', label: 'En Stock' },
     g: ['#9bcf6a', '#5e8a2f'],
   },
+  {
+    id: 'honey-bears',
+    name: 'Osos de Miel Silvestre',
+    tagline: 'Gomitas suaves endulzadas con miel pura.',
+    category: 'osos',
+    price: 7.5,
+    rating: 4,
+    reviews: 39,
+    g: ['#ffcf6e', '#e09a2e'],
+  },
+  {
+    id: 'mint-butterflies',
+    name: 'Mariposas de Menta',
+    tagline: 'Caramelos refrescantes con alas de azúcar.',
+    category: 'mariposas',
+    price: 8.0,
+    rating: 4,
+    reviews: 27,
+    g: ['#9be3cf', '#3fae93'],
+  },
+  {
+    id: 'spicy-crickets',
+    name: 'Grillos Picositos',
+    tagline: 'Chocolate con un toque de chile artesanal.',
+    category: 'grillos',
+    price: 11.0,
+    rating: 5,
+    reviews: 52,
+    badge: { tone: 'orange', label: 'Picante' },
+    g: ['#b05a2a', '#5e2a12'],
+  },
+  {
+    id: 'rainbow-lions',
+    name: 'Leones Arcoíris',
+    tagline: 'Surtido frutal de colores vibrantes.',
+    category: 'leones',
+    price: 10.5,
+    oldPrice: 13.0,
+    rating: 5,
+    reviews: 96,
+    badge: { tone: 'brand', label: '-19% OFF' },
+    g: ['#ff9ec0', '#ff8c42'],
+  },
 ]
 
 export const productDetail = {
@@ -184,6 +227,11 @@ export const checkoutSummary = {
   total: 88.0,
 }
 
+// Genera `n` filas a partir de una semilla, ciclando su contenido y reasignando id
+// (para tener suficientes registros y que la paginación tenga varias páginas reales).
+const cycle = (seed, n, makeId) =>
+  Array.from({ length: n }, (_, i) => ({ ...seed[i % seed.length], id: makeId(i, seed[i % seed.length]) }))
+
 /* ===================== Vendedor ===================== */
 
 export const sellerRecentOrders = [
@@ -194,11 +242,18 @@ export const sellerRecentOrders = [
   { id: '9928', customer: 'Luis Torres', total: 15.5, status: 'cancelada', date: '11 Oct, 18:45 PM' },
 ]
 
-export const sellerProducts = [
+const seedSellerProducts = [
   { id: 'trufas-cacao', name: 'Trufas de Cacao Oscuro', category: 'Chocolates', price: 12.5, sold: 840, status: 'activo', g: ['#7a4a2a', '#3d2414'] },
   { id: 'ositos-acidos', name: 'Ositos de Goma Ácidos', category: 'Gomitas', price: 4.2, sold: 2100, status: 'inactivo', g: ['#ff8c42', '#ff619b'] },
   { id: 'caramelos-duros', name: 'Caramelos Duros Surtidos', category: 'Caramelos', price: 6.75, sold: 450, status: 'activo', g: ['#ffd25a', '#ff8c42'] },
+  { id: 'malvaviscos-vainilla', name: 'Malvaviscos de Vainilla', category: 'Malvaviscos', price: 5.5, sold: 1280, status: 'activo', g: ['#ffe0ec', '#ff9ec0'] },
+  { id: 'paletas-frutales', name: 'Paletas Frutales Mix', category: 'Caramelos', price: 3.9, sold: 730, status: 'activo', g: ['#9be3cf', '#3fae93'] },
+  { id: 'tableta-leche', name: 'Tableta de Chocolate con Leche', category: 'Chocolates', price: 9.25, sold: 1560, status: 'inactivo', g: ['#a86a3c', '#5e3a1d'] },
+  { id: 'gomitas-lima', name: 'Gomitas de Lima Ácida', category: 'Gomitas', price: 4.5, sold: 980, status: 'activo', g: ['#c6e86a', '#7aa82f'] },
+  { id: 'bombones-surtidos', name: 'Bombones Surtidos', category: 'Chocolates', price: 15.0, sold: 410, status: 'activo', g: ['#d4a5b5', '#a8607d'] },
+  { id: 'caramelo-cafe', name: 'Caramelos de Café', category: 'Caramelos', price: 6.0, sold: 320, status: 'inactivo', g: ['#b89060', '#6e4a2a'] },
 ]
+export const sellerProducts = cycle(seedSellerProducts, 14, (i, r) => (i < seedSellerProducts.length ? r.id : `${r.id}-${i}`))
 
 export const sellerProductDetail = {
   id: 'gomitas-arcoiris',
@@ -217,16 +272,19 @@ export const sellerProductDetail = {
   gallery: [['#ff8c42', '#c0265e'], ['#ffd25a', '#ff8c42'], ['#ff9ec0', '#ff619b'], ['#9bcf6a', '#5e8a2f']],
 }
 
+const seedSellerSales = [
+  { id: '9021', customer: 'María González', items: 3, total: 450.0, status: 'pendiente', date: '24 Oct, 2023' },
+  { id: '9020', customer: 'Carlos Ramírez', items: 1, total: 120.5, status: 'procesando', date: '24 Oct, 2023' },
+  { id: '9019', customer: 'Ana Lucía Torres', items: 5, total: 890.0, status: 'enviado', date: '23 Oct, 2023' },
+  { id: '9018', customer: 'Empresa XYZ S.A.', items: 12, total: 2450.0, status: 'entregado', date: '22 Oct, 2023' },
+  { id: '9017', customer: 'Roberto Gómez', items: 2, total: 300.0, status: 'cancelado', date: '20 Oct, 2023' },
+  { id: '9016', customer: 'Lucía Fernández', items: 4, total: 560.0, status: 'enviado', date: '19 Oct, 2023' },
+  { id: '9015', customer: 'Diego Salazar', items: 1, total: 85.0, status: 'entregado', date: '18 Oct, 2023' },
+]
 export const sellerSales = {
   totalOrders: 1248,
   totalRevenue: 45290.0,
-  rows: [
-    { id: '9021', customer: 'María González', items: 3, total: 450.0, status: 'pendiente', date: '24 Oct, 2023' },
-    { id: '9020', customer: 'Carlos Ramírez', items: 1, total: 120.5, status: 'procesando', date: '24 Oct, 2023' },
-    { id: '9019', customer: 'Ana Lucía Torres', items: 5, total: 890.0, status: 'enviado', date: '23 Oct, 2023' },
-    { id: '9018', customer: 'Empresa XYZ S.A.', items: 12, total: 2450.0, status: 'entregado', date: '22 Oct, 2023' },
-    { id: '9017', customer: 'Roberto Gómez', items: 2, total: 300.0, status: 'cancelado', date: '20 Oct, 2023' },
-  ],
+  rows: cycle(seedSellerSales, 13, (i) => String(9021 - i)),
 }
 
 export const sellerOrderDetail = {
@@ -278,11 +336,15 @@ export const adminActivity = [
   { id: '8901', user: 'Ana López', type: 'Venta Estándar', amount: '$340.50', status: 'procesando', date: 'Hace 2 horas' },
 ]
 
-export const adminUsers = [
+const seedAdminUsers = [
   { id: '8921', name: 'María Jiménez', email: 'maria.j@example.com', role: 'Vendedor', activity: '142 Ventas', status: 'activo' },
   { id: '8922', name: 'Carlos Pérez', email: 'carlos.p@example.com', role: 'Cliente', activity: '12 Compras', status: 'activo' },
   { id: '8923', name: 'Ana López', email: 'ana.l@example.com', role: 'Vendedor', activity: '89 Ventas', status: 'suspendido' },
+  { id: '8924', name: 'Diego Salazar', email: 'diego.s@example.com', role: 'Cliente', activity: '34 Compras', status: 'activo' },
+  { id: '8925', name: 'Lucía Fernández', email: 'lucia.f@example.com', role: 'Vendedor', activity: '210 Ventas', status: 'activo' },
+  { id: '8926', name: 'Roberto Gómez', email: 'roberto.g@example.com', role: 'Cliente', activity: '5 Compras', status: 'suspendido' },
 ]
+export const adminUsers = cycle(seedAdminUsers, 11, (i) => String(8921 + i))
 
 export const adminPaymentProviders = [
   { id: 'stripe', name: 'Stripe', enabled: true },
@@ -290,23 +352,34 @@ export const adminPaymentProviders = [
   { id: 'mercadopago', name: 'MercadoPago', enabled: false },
 ]
 
-export const adminGlobalSales = [
+const seedAdminGlobalSales = [
   { id: '9021', date: '24 Oct 2023, 14:30', customer: 'Carlos Mendoza', seller: 'Sweet Tooth Mx', total: 1250.0, commission: 125.0, status: 'pagado' },
   { id: '9020', date: '24 Oct 2023, 11:15', customer: 'Ana García', seller: 'Candy Corp', total: 890.5, commission: 89.05, status: 'rechazado' },
   { id: '9019', date: '23 Oct 2023, 18:45', customer: 'Luis Herrera', seller: 'Gomitas Locas SA', total: 3400.0, commission: 340.0, status: 'pendiente' },
   { id: '9018', date: '23 Oct 2023, 09:20', customer: 'Elena Rojas', seller: 'Sweet Tooth Mx', total: 450.0, commission: 45.0, status: 'pagado' },
+  { id: '9017', date: '22 Oct 2023, 16:05', customer: 'Pablo Núñez', seller: 'Candy Corp', total: 1780.0, commission: 178.0, status: 'pagado' },
+  { id: '9016', date: '22 Oct 2023, 10:40', customer: 'Sofía Castro', seller: 'Gomitas Locas SA', total: 620.0, commission: 62.0, status: 'pendiente' },
 ]
+export const adminGlobalSales = cycle(seedAdminGlobalSales, 13, (i) => String(9021 - i))
 
-export const adminProducts = [
+const seedAdminProducts = [
   { id: 'gom-001', name: 'Gomitas Ácidas Arcoíris', sku: 'GOM-001', category: 'Gomitas', seller: 'Dulcería El Oasis', price: 4.5, status: 'publicado', g: ['#ff8c42', '#c0265e'] },
   { id: 'cho-092', name: 'Trufas de Cacao 70%', sku: 'CHO-092', category: 'Chocolates', seller: 'Cacao Fino Ltda.', price: 18.0, status: 'pendiente', g: ['#7a4a2a', '#3d2414'] },
   { id: 'car-014', name: 'Caramelos de Menta Finos', sku: 'CAR-014', category: 'Caramelos', seller: 'Dulcería El Oasis', price: 6.25, status: 'publicado', g: ['#9bcf6a', '#5e8a2f'] },
+  { id: 'mal-007', name: 'Malvaviscos de Fresa', sku: 'MAL-007', category: 'Malvaviscos', seller: 'Nube Dulce', price: 5.0, status: 'publicado', g: ['#ffd6e4', '#ff8fb6'] },
+  { id: 'cho-110', name: 'Bombones Rellenos', sku: 'CHO-110', category: 'Chocolates', seller: 'Cacao Fino Ltda.', price: 22.0, status: 'pendiente', g: ['#a8607d', '#6e3a52'] },
+  { id: 'gom-045', name: 'Gusanos de Goma', sku: 'GOM-045', category: 'Gomitas', seller: 'Gomitas Locas SA', price: 3.75, status: 'publicado', g: ['#c6e86a', '#7aa82f'] },
 ]
+export const adminProducts = cycle(seedAdminProducts, 12, (i, r) => (i < seedAdminProducts.length ? r.id : `${r.id}-${i}`))
 
-export const adminCategories = [
+const seedAdminCategories = [
   { id: 1, name: 'Chocolates', desc: 'Tabletas, bombones, trufas y derivados de cacao', count: 142 },
   { id: 2, name: 'Gomitas', desc: 'Caramelos de goma, ositos, gusanitos, y opciones', count: 87 },
   { id: 3, name: 'Caramelos Macizos', desc: 'Dulces duros, paletas, mentas y confites tradicionales', count: 56 },
   { id: 4, name: 'Snacks Salados', desc: 'Pretzels, papas fritas, cacahuates y mezclas para botanear', count: 32 },
   { id: 5, name: 'Bebidas', desc: 'Refrescos, jugos, aguas saborizadas y bebidas energéticas', count: 105 },
+  { id: 6, name: 'Malvaviscos', desc: 'Nubes, bombones esponjosos y mezclas para chocolate', count: 48 },
+  { id: 7, name: 'Galletas', desc: 'Galletas artesanales, sándwich y rellenas', count: 73 },
+  { id: 8, name: 'Edición Limitada', desc: 'Colecciones de temporada y ediciones especiales', count: 19 },
 ]
+export const adminCategories = cycle(seedAdminCategories, 12, (i) => i + 1)

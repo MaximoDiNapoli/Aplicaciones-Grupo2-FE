@@ -3,12 +3,14 @@ import Footer from '../components/layout/Footer'
 import AccountSidebar from '../components/layout/AccountSidebar'
 import ProductGrid from '../components/product/ProductGrid'
 import { Checkbox, Select } from '../components/ui/Field'
+import Pagination, { usePager } from '../components/ui/Pagination'
 import { products } from '../data/mock'
 
 const catFilters = ['Ositos', 'Mariposas', 'Insectos', 'Leones']
 
 // Catálogo: sidebar de cuenta + panel de filtros + grilla + paginación.
 function Catalog() {
+  const { page, setPage, total, totalPages, slice } = usePager(products, 6)
   return (
     <div className="page">
       <PublicHeader />
@@ -33,20 +35,15 @@ function Catalog() {
         </aside>
         <main className="catalog__content">
           <div className="catalog__toolbar">
-            <span className="catalog__count">Mostrando {products.length} dulces artesanales</span>
+            <span className="catalog__count">Mostrando {total} dulces artesanales</span>
             <Select
               className="catalog__sort"
               options={['Relevancia', 'Precio: menor a mayor', 'Precio: mayor a menor', 'Más nuevos']}
               defaultValue="Relevancia"
             />
           </div>
-          <ProductGrid products={products} columns={3} compact />
-          <div className="pagination">
-            <button className="pagination__item is-active">1</button>
-            <button className="pagination__item">2</button>
-            <button className="pagination__item">3</button>
-            <button className="pagination__item pagination__item--next" aria-label="Siguiente">›</button>
-          </div>
+          <ProductGrid products={slice} columns={3} compact />
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </main>
       </div>
       <Footer />

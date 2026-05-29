@@ -1,10 +1,12 @@
 import { AdminLayout, PageTitle, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
+import Pagination, { usePager } from '../../components/ui/Pagination'
 import { adminUsers, adminPaymentProviders } from '../../data/mock'
 
 // Gestión de Usuarios + panel de Métodos de Pago (pasarelas).
 function AdminUsers() {
+  const { page, setPage, total, totalPages, slice, from, to } = usePager(adminUsers, 4)
   return (
     <AdminLayout active="usuarios">
       <PageTitle
@@ -32,7 +34,7 @@ function AdminUsers() {
         <div className="adm-table__head" style={{ gridTemplateColumns: '0.8fr 2fr 1fr 1.2fr 1fr 0.9fr' }}>
           <span>ID</span><span>Usuario</span><span>Rol</span><span>Actividad</span><span>Estado</span><span className="ta-right">Acciones</span>
         </div>
-        {adminUsers.map((u, i) => (
+        {slice.map((u, i) => (
           <div className="adm-table__row" key={u.id} style={{ gridTemplateColumns: '0.8fr 2fr 1fr 1.2fr 1fr 0.9fr' }}>
             <span className="adm-muted">{u.id}</span>
             <span className="adm-cell-user">
@@ -49,8 +51,8 @@ function AdminUsers() {
           </div>
         ))}
         <div className="adm-table__foot">
-          <span className="adm-muted">Mostrando 1 a 3 de 156 usuarios</span>
-          <div className="mini-pager"><button disabled>Anterior</button><button>Siguiente</button></div>
+          <span className="adm-muted">Mostrando {from} a {to} de {total} usuarios</span>
+          <Pagination variant="mini" page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </div>
 
