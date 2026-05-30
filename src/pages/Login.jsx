@@ -1,8 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import AuthLayout from '../components/layout/AuthLayout'
 import { TextInput, PasswordInput, Checkbox } from '../components/ui/Field'
 import Button from '../components/ui/Button'
-import { useState } from 'react'
+import { useAuth } from '../store/auth'
 
 // Login unificado. NOTA: sin selección manual de rol (corrección de la profesora):
 // el rol se obtiene de las credenciales (simula el rol del token), no de tabs en pantalla.
@@ -12,15 +13,17 @@ import { useState } from 'react'
 //   en otro caso        -> tienda (usuario)
 function Login() {
   const navigate = useNavigate()
+  const { signIn, signInAsGuest } = useAuth()
   const [remember, setRemember] = useState(false)
   const [account, setAccount] = useState('')
   const submit = (e) => {
     e.preventDefault()
     const value = account.trim().toLowerCase()
-    if (value.includes('admin')) navigate('/admin')
-    else if (value.includes('vendedor')) navigate('/vendedor')
-    else navigate('/')
+    if (value.includes('admin')) { signIn('admin'); navigate('/admin') }
+    else if (value.includes('vendedor')) { signIn('vendedor'); navigate('/vendedor') }
+    else { signIn('cliente'); navigate('/') }
   }
+  const enterAsGuest = () => { signInAsGuest(); navigate('/') }
   return (
     <AuthLayout
       hero={{
@@ -44,6 +47,13 @@ function Login() {
         <Checkbox label="Recordarme" checked={remember} onChange={() => setRemember((v) => !v)} />
         <Button type="submit" block size="lg" iconRight="arrowRight">Entrar al Safari</Button>
       </form>
+
+      <div className="auth-divider"><span>o</span></div>
+      <Button variant="outline" block size="lg" iconLeft="user" onClick={enterAsGuest}>
+        Acceder sin cuenta
+      </Button>
+      <p className="auth-guest-note">Como invitado puedes explorar la tienda, pero necesitas una cuenta para comprar.</p>
+
       <p className="auth-switch">
         ¿Aún no tienes cuenta? <Link to="/registro" className="link">Crea una cuenta</Link>
       </p>

@@ -1,6 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
+import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../layout/DashboardLayout'
 import Icon from '../ui/Icon'
+import { useAuth } from '../../store/auth'
+
+// Botón de cerrar sesión reutilizable para los paneles.
+function useLogout() {
+  const { signOut } = useAuth()
+  const navigate = useNavigate()
+  return () => { signOut(); navigate('/login') }
+}
 
 // Navegación y footers de cada panel, con la paleta de usuario.
 const sellerNav = [
@@ -17,30 +26,26 @@ const adminNav = [
   { id: 'categorias', label: 'Categorías', icon: 'sitemap', to: '/admin/categorias' },
 ]
 
-function SellerFooter() {
+// Tarjeta de usuario con cierre de sesión, compartida por vendedor y admin.
+function DashUserFooter({ name, email }) {
+  const logout = useLogout()
   return (
     <div className="dash-user">
       <span className="dash-user__avatar"><Icon name="userCircle" size={28} strokeFill /></span>
       <div className="dash-user__meta">
-        <div className="dash-user__name">Seller Sugar</div>
-        <div className="dash-user__email">seller@sugarsafari.com</div>
+        <div className="dash-user__name">{name}</div>
+        <div className="dash-user__email">{email}</div>
       </div>
-    </div>
-  )
-}
-
-function AdminFooter() {
-  return (
-    <div className="dash-links">
-      <a className="dash-links__item"><Icon name="userCircle" size={20} strokeFill /> Mi Perfil</a>
-      <a className="dash-links__item"><Icon name="logout" size={20} strokeFill /> Cerrar Sesión</a>
+      <button type="button" className="dash-logout" aria-label="Cerrar sesión" onClick={logout}>
+        <Icon name="logout" size={20} strokeFill />
+      </button>
     </div>
   )
 }
 
 export function SellerLayout({ active, children }) {
   return (
-    <DashboardLayout variant="seller" subtitle="Administración" nav={sellerNav} active={active} footer={<SellerFooter />}>
+    <DashboardLayout variant="seller" subtitle="Administración" nav={sellerNav} active={active} footer={<DashUserFooter name="Seller Sugar" email="seller@sugarsafari.com" />}>
       {children}
     </DashboardLayout>
   )
@@ -48,7 +53,7 @@ export function SellerLayout({ active, children }) {
 
 export function AdminLayout({ active, children }) {
   return (
-    <DashboardLayout variant="admin" subtitle="Admin Dashboard" nav={adminNav} active={active} footer={<AdminFooter />}>
+    <DashboardLayout variant="admin" subtitle="Admin Dashboard" nav={adminNav} active={active} footer={<DashUserFooter name="Admin Sugar" email="admin@sugarsafari.com" />}>
       {children}
     </DashboardLayout>
   )

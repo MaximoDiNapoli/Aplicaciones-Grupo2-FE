@@ -1,7 +1,8 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import './styles/app.css'
 import './styles/dashboard.css'
+import { useAuth } from './store/auth'
 
 import Home from './pages/Home'
 import Catalog from './pages/Catalog'
@@ -32,6 +33,13 @@ import AdminSales from './pages/admin/AdminSales'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminCategories from './pages/admin/AdminCategories'
 
+// Bloquea el checkout a los invitados (sin cuenta): los manda al login.
+function RequireAccount({ children }) {
+  const { isGuest } = useAuth()
+  if (isGuest) return <Navigate to="/login" replace />
+  return children
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => window.scrollTo(0, 0), [pathname])
@@ -47,10 +55,10 @@ function App() {
         <Route path="/catalogo" element={<Catalog />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/carrito" element={<Cart />} />
-        <Route path="/checkout/envio" element={<CheckoutShipping />} />
-        <Route path="/checkout/pago" element={<CheckoutPayment />} />
-        <Route path="/checkout/resumen" element={<CheckoutSummary />} />
-        <Route path="/checkout/confirmacion" element={<CheckoutConfirmation />} />
+        <Route path="/checkout/envio" element={<RequireAccount><CheckoutShipping /></RequireAccount>} />
+        <Route path="/checkout/pago" element={<RequireAccount><CheckoutPayment /></RequireAccount>} />
+        <Route path="/checkout/resumen" element={<RequireAccount><CheckoutSummary /></RequireAccount>} />
+        <Route path="/checkout/confirmacion" element={<RequireAccount><CheckoutConfirmation /></RequireAccount>} />
         <Route path="/compras" element={<MyOrders />} />
         <Route path="/compras/:id" element={<OrderDetail />} />
         <Route path="/perfil" element={<Profile />} />

@@ -5,12 +5,14 @@ import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import CartEmpty from './CartEmpty'
 import { useCart } from '../store/cart'
+import { useAuth } from '../store/auth'
 
 const FREE_SHIPPING = 50
 
 // Carrito: banner envío gratis + items + resumen. Si está vacío muestra CartEmpty.
 function Cart() {
   const { items, subtotal, setQty, remove } = useCart()
+  const { isGuest } = useAuth()
   if (items.length === 0) return <CartEmpty />
 
   const shipping = subtotal >= FREE_SHIPPING ? 0 : 5
@@ -40,8 +42,10 @@ function Cart() {
           subtotal={subtotal}
           shipping={shipping}
           taxes={taxes}
-          ctaLabel="Proceder al Pago"
-          ctaTo="/checkout/envio"
+          ctaLabel={isGuest ? 'Inicia sesión para comprar' : 'Proceder al Pago'}
+          ctaTo={isGuest ? '/login' : '/checkout/envio'}
+          ctaIcon={isGuest ? 'lock' : 'arrowRight'}
+          note={isGuest ? 'Estás navegando como invitado. Crea una cuenta o inicia sesión para finalizar tu compra.' : undefined}
         />
       </div>
     </PublicStoreLayout>

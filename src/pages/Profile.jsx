@@ -1,13 +1,18 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AccountLayout from '../components/layout/AccountLayout'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { useToast } from '../store/toast'
+import { useAuth } from '../store/auth'
 import { profile } from '../data/mock'
 
 // Perfil de Usuario: tarjeta de perfil editable + stats.
 function Profile() {
   const notify = useToast()
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
+  const logout = () => { signOut(); navigate('/login') }
   const [editing, setEditing] = useState(false)
   const [email, setEmail] = useState(profile.email)
   const [phone, setPhone] = useState(profile.phone)
@@ -48,7 +53,7 @@ function Profile() {
           <Button iconLeft={editing ? 'check' : 'pencil'} onClick={toggleEdit}>
             {editing ? 'Guardar' : 'Editar Perfil'}
           </Button>
-          <Button to="/login" variant="outline" iconLeft="logout">Cerrar Sesión</Button>
+          <Button variant="outline" iconLeft="logout" onClick={logout}>Cerrar Sesión</Button>
         </div>
       </section>
 

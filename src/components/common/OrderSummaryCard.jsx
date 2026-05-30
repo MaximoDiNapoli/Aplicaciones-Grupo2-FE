@@ -7,7 +7,7 @@ import { useToast } from '../../store/toast'
 const COUPONS = { SAFARI10: 0.1, DULCE20: 0.2 }
 
 // Resumen de compra con totales y cupón funcional (carrito).
-function OrderSummaryCard({ subtotal = 0, shipping = 0, taxes, discount, title = 'Resumen de Safari', withCoupon = true, ctaLabel, ctaTo, ctaIcon = 'arrowRight' }) {
+function OrderSummaryCard({ subtotal = 0, shipping = 0, taxes, discount, title = 'Resumen de Safari', withCoupon = true, ctaLabel, ctaTo, ctaIcon = 'arrowRight', note }) {
   const notify = useToast()
   const [coupon, setCoupon] = useState('')
   const [applied, setApplied] = useState(null) // { code, amount }
@@ -67,6 +67,7 @@ function OrderSummaryCard({ subtotal = 0, shipping = 0, taxes, discount, title =
       {ctaLabel && (
         <Button to={ctaTo} block size="lg" iconRight={ctaIcon} className="summary-card__cta">{ctaLabel}</Button>
       )}
+      {note && <p className="summary-card__note">{note}</p>}
     </aside>
   )
 }

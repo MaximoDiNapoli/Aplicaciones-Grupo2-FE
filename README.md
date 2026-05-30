@@ -38,8 +38,16 @@ No hay backend: los datos son de demostración y la sesión se simula con la nav
 
    La contraseña puede ser cualquier valor. Luego presioná **"Entrar al Safari"**.
 
-2. Para **cerrar sesión**, entrá a **`/perfil`** y usá el botón **"Cerrar Sesión"**
-   (junto a "Editar Perfil"), que te devuelve a `/login`.
+2. **Acceder sin cuenta (invitado)**: el botón **"Acceder sin cuenta"** del login te deja
+   explorar la tienda, pero **no podés comprar**: en el carrito el botón pasa a
+   "Inicia sesión para comprar" y las rutas de checkout redirigen al login.
+
+3. **Cerrar sesión** (los tres roles):
+   - Usuario/Cliente → en **`/perfil`**, botón **"Cerrar Sesión"**.
+   - Vendedor → ícono de salida junto al usuario, abajo del sidebar (`/vendedor`).
+   - Administrador → **"Cerrar Sesión"** abajo del sidebar (`/admin`).
+
+   Cualquiera de ellos limpia la sesión y vuelve a `/login`.
 
 ## Vistas implementadas (usuario final)
 

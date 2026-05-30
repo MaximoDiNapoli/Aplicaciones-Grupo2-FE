@@ -274,6 +274,7 @@
 .summary-card__total span:first-child { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 24px; }
 .summary-card__total-value { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 30px; color: var(--brand); }
 .summary-card__cta { margin-top: 20px; }
+.summary-card__note { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.5; }
 
 /* ---------- Empty state ---------- */
 .empty-state { text-align: center; max-width: 560px; margin: 24px auto 48px; display: flex; flex-direction: column; align-items: center; }
@@ -509,6 +510,10 @@
 .auth-form { display: flex; flex-direction: column; gap: 16px; }
 .auth-form .checkbox { margin: 2px 0; }
 .auth-switch { text-align: center; color: var(--muted); margin-top: 22px; font-size: 14px; }
+.auth-divider { display: flex; align-items: center; text-align: center; color: var(--muted-soft); font-size: 13px; margin: 18px 0; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+.auth-divider span { padding: 0 14px; }
+.auth-guest-note { text-align: center; color: var(--muted); font-size: 12.5px; margin: 10px 0 0; }
 
 /* ---------- State / 404 ---------- */
 .state-page { min-height: 100vh; background: linear-gradient(135deg, #fdeef2 0%, #faf7f2 40%, #e6f7f1 100%); display: flex; flex-direction: column; }
