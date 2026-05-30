@@ -11,13 +11,23 @@ import { useAuth } from '../store/auth'
 //   contiene "admin"    -> panel de administrador
 //   contiene "vendedor" -> panel de vendedor
 //   en otro caso        -> tienda (usuario)
+// Contraseña única de demostración para todas las cuentas.
+const DEMO_PASSWORD = '123'
+
 function Login() {
   const navigate = useNavigate()
   const { signIn, signInAsGuest } = useAuth()
   const [remember, setRemember] = useState(false)
   const [account, setAccount] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const submit = (e) => {
     e.preventDefault()
+    if (password !== DEMO_PASSWORD) {
+      setError('Contraseña incorrecta. La contraseña de demostración es 123.')
+      return
+    }
+    setError('')
     const value = account.trim().toLowerCase()
     if (value.includes('admin')) { signIn('admin'); navigate('/admin') }
     else if (value.includes('vendedor')) { signIn('vendedor'); navigate('/vendedor') }
@@ -43,7 +53,13 @@ function Login() {
           value={account}
           onChange={(e) => setAccount(e.target.value)}
         />
-        <PasswordInput label="Contraseña" placeholder="••••••••" />
+        <PasswordInput
+          label="Contraseña"
+          placeholder="123"
+          value={password}
+          onChange={(e) => { setPassword(e.target.value); if (error) setError('') }}
+        />
+        {error && <p className="auth-error">{error}</p>}
         <Checkbox label="Recordarme" checked={remember} onChange={() => setRemember((v) => !v)} />
         <Button type="submit" block size="lg" iconRight="arrowRight">Entrar al Safari</Button>
       </form>

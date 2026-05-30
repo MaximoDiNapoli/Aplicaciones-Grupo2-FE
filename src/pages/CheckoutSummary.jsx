@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import CheckoutLayout from '../components/layout/CheckoutLayout'
 import ProductImage from '../components/product/ProductImage'
 import { Checkbox } from '../components/ui/Field'
@@ -10,10 +10,12 @@ import { useCart, buildCheckoutSummary } from '../store/cart'
 
 // Checkout paso 3: revisión final del pedido.
 function CheckoutSummary() {
-  const [accept, setAccept] = useState(true)
+  const navigate = useNavigate()
+  const [accept, setAccept] = useState(false) // términos desmarcados por defecto
   const { items, subtotal } = useCart()
   const summary = buildCheckoutSummary(items, subtotal)
   const { count, shipping, discount, total } = summary
+  const canFinish = accept && items.length > 0
 
   return (
     <CheckoutLayout step={3} brandSize="lg">
@@ -85,9 +87,16 @@ function CheckoutSummary() {
             onChange={() => setAccept((v) => !v)}
             label={<>Acepto los <a className="link" href="#">términos y condiciones</a> y la política de privacidad de Sugar Safari.</>}
           />
-          <Button to="/checkout/confirmacion" block size="lg" iconLeft="lock">
+          <Button
+            block
+            size="lg"
+            iconLeft="lock"
+            disabled={!canFinish}
+            onClick={() => navigate('/checkout/confirmacion')}
+          >
             FINALIZAR COMPRA ({formatPrice(total)})
           </Button>
+          {!accept && <p className="totals-panel__hint">Debes aceptar los términos y condiciones para continuar.</p>}
           <div className="totals-panel__secure"><Icon name="shield" size={14} strokeFill /> Pago seguro encriptado</div>
         </aside>
       </div>

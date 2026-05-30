@@ -216,17 +216,6 @@ export const addresses = [
   { id: 'oficina', label: 'Oficina', icon: 'briefcase', lines: ['Torre Bombón 45, Piso 3', 'Ciudad Caramelo, 90215'] },
 ]
 
-// Resumen de orden usado en el flujo de checkout.
-export const checkoutSummary = {
-  items: [
-    { id: 1, name: 'Leones de Goma Salvajes', variant: 'Caja 250g', qty: 2, price: 24.0, g: ['#ffb15a', '#ff8c42'] },
-    { id: 2, name: 'Osos de Chocolate Oscuro', variant: 'Caja 150g', qty: 1, price: 35.0, g: ['#7a4a2a', '#3d2414'] },
-  ],
-  subtotal: 83.0,
-  shipping: 5.0,
-  total: 88.0,
-}
-
 // Genera `n` filas a partir de una semilla, ciclando su contenido y reasignando id
 // (para tener suficientes registros y que la paginación tenga varias páginas reales).
 const cycle = (seed, n, makeId) =>

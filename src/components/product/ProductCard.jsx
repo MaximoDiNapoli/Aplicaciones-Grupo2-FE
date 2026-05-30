@@ -6,11 +6,14 @@ import { Badge } from '../ui/Badge'
 import Icon from '../ui/Icon'
 import { useCart } from '../../store/cart'
 
-// Tarjeta de producto: imagen, badge, nombre, copy, precio y CTA agregar.
+// Tarjeta de producto: imagen, badge, favorito, nombre, precio y CTA agregar.
+// compact = variante reducida (oculta el copy) para grillas densas.
 function ProductCard({ product, compact = false }) {
   const { addItem } = useCart()
-  const [added, setAdded] = useState(false)
+  const [added, setAdded] = useState(false) // feedback temporal del botón agregar
   const [fav, setFav] = useState(false)
+
+  // Agrega al carrito y muestra el check por un instante.
   const add = () => {
     addItem(product, 1)
     setAdded(true)
@@ -48,6 +51,7 @@ function ProductCard({ product, compact = false }) {
   )
 }
 
+// Etiqueta corta de categoría mostrada arriba del nombre.
 function categoryLabel(id) {
   const map = {
     osos: 'Cacao Oscuro', mariposas: 'Edición Limitada', grillos: 'Fruta Natural', leones: 'Fruta Natural',

@@ -39,6 +39,7 @@
 /* ---------- Buttons ---------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: none; border-radius: 999px; font-family: 'Nunito Sans', sans-serif; font-weight: 700; cursor: pointer; transition: transform .08s, background .15s, box-shadow .15s; white-space: nowrap; line-height: 1; }
 .btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .btn--sm { padding: 8px 16px; font-size: 13px; }
 .btn--md { padding: 11px 22px; font-size: 15px; }
 .btn--lg { padding: 15px 28px; font-size: 16px; }
@@ -388,6 +389,7 @@
 .totals-panel__lines dt { color: var(--muted); } .totals-panel__lines dd { margin: 0; font-weight: 700; }
 .totals-panel__lines .is-discount dt, .totals-panel__lines .is-discount dd { color: #137a61; }
 .totals-panel__terms { align-items: flex-start; margin: 18px 0; font-size: 13px; color: var(--muted); }
+.totals-panel__hint { text-align: center; margin: 10px 0 0; color: var(--brand); font-size: 12.5px; font-weight: 600; }
 .totals-panel__secure { text-align: center; margin-top: 14px; color: var(--muted); font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 /* ---------- Confirmation ---------- */
@@ -510,6 +512,7 @@
 .auth-form { display: flex; flex-direction: column; gap: 16px; }
 .auth-form .checkbox { margin: 2px 0; }
 .auth-switch { text-align: center; color: var(--muted); margin-top: 22px; font-size: 14px; }
+.auth-error { color: var(--brand); background: var(--brand-soft); border-radius: 8px; padding: 9px 12px; font-size: 13px; font-weight: 600; margin: 0; }
 .auth-divider { display: flex; align-items: center; text-align: center; color: var(--muted-soft); font-size: 13px; margin: 18px 0; }
 .auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
 .auth-divider span { padding: 0 14px; }

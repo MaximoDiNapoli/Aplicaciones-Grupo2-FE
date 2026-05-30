@@ -36,7 +36,8 @@ No hay backend: los datos son de demostración y la sesión se simula con la nav
    | `vendedor` | `/vendedor` | Panel de vendedor |
    | `admin` | `/admin` | Panel de administrador |
 
-   La contraseña puede ser cualquier valor. Luego presioná **"Entrar al Safari"**.
+   La contraseña de **todas** las cuentas es **`123`** (cualquier otra muestra error).
+   Luego presioná **"Entrar al Safari"**.
 
 2. **Acceder sin cuenta (invitado)**: el botón **"Acceder sin cuenta"** del login te deja
    explorar la tienda, pero **no podés comprar**: en el carrito el botón pasa a

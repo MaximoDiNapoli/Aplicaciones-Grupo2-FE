@@ -40,17 +40,20 @@ function RequireAccount({ children }) {
   return children
 }
 
+// Lleva el scroll al inicio en cada cambio de ruta.
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => window.scrollTo(0, 0), [pathname])
   return null
 }
 
+// Tabla de rutas de la aplicación (usuario, vendedor y admin).
 function App() {
   return (
     <>
       <ScrollToTop />
       <Routes>
+        {/* Usuario final */}
         <Route path="/" element={<Home />} />
         <Route path="/catalogo" element={<Catalog />} />
         <Route path="/producto/:id" element={<ProductDetail />} />

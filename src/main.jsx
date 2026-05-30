@@ -7,6 +7,7 @@ import { CartProvider } from './store/cart'
 import { ToastProvider } from './store/toast'
 import { AuthProvider } from './store/auth'
 
+// Punto de entrada: router + providers globales (auth, toasts, carrito) envuelven la app.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>

@@ -4,20 +4,19 @@ import OrderSummaryCard from '../components/common/OrderSummaryCard'
 import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import CartEmpty from './CartEmpty'
-import { useCart } from '../store/cart'
+import { useCart, PRICING, shippingFor } from '../store/cart'
 import { useAuth } from '../store/auth'
 
-const FREE_SHIPPING = 50
-
-// Carrito: banner envío gratis + items + resumen. Si está vacío muestra CartEmpty.
+// Carrito: banner de envío gratis + lista de ítems + resumen.
+// Si está vacío delega en CartEmpty; los invitados no pueden finalizar la compra.
 function Cart() {
   const { items, subtotal, setQty, remove } = useCart()
   const { isGuest } = useAuth()
   if (items.length === 0) return <CartEmpty />
 
-  const shipping = subtotal >= FREE_SHIPPING ? 0 : 5
-  const taxes = +(subtotal * 0.08).toFixed(2)
-  const missing = Math.max(0, FREE_SHIPPING - subtotal)
+  const shipping = shippingFor(subtotal)
+  const taxes = +(subtotal * PRICING.taxRate).toFixed(2)
+  const missing = Math.max(0, PRICING.freeShippingFrom - subtotal) // falta para envío gratis
 
   return (
     <PublicStoreLayout>

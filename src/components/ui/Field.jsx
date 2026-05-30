@@ -37,6 +37,7 @@ export function PasswordInput({ label, icon = 'lock', className = '', ...rest })
   )
 }
 
+// Selector desplegable. options acepta strings o { value, label }.
 export function Select({ label, options = [], className = '', ...rest }) {
   return (
     <label className={`field ${className}`.trim()}>
@@ -52,6 +53,7 @@ export function Select({ label, options = [], className = '', ...rest }) {
   )
 }
 
+// Casilla de verificación con estilo de marca.
 export function Checkbox({ label, checked, onChange, className = '' }) {
   return (
     <label className={`checkbox ${className}`.trim()}>
