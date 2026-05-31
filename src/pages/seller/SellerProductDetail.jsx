@@ -50,7 +50,7 @@ function SellerProductDetail() {
           <section className="form-card">
             <h2 className="form-card__title">Estructura de Precio</h2>
             <div className="spd-line"><span>Precio Base</span><span className="adm-muted" style={{ textDecoration: 'line-through' }}>{formatPrice(p.basePrice)}</span></div>
-            <div className="spd-line"><span>Descuento Mayoreo</span><Pill tone="brand">{p.discount}%</Pill></div>
+            <div className="spd-line"><span>Descuento Mayorista</span><Pill tone="brand">{p.discount}%</Pill></div>
             <div className="spd-line spd-line--final"><span>Precio Final</span><span className="spd-final">{formatPrice(p.finalPrice)}</span></div>
           </section>
           <section className="form-card">
