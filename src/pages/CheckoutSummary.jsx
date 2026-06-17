@@ -8,13 +8,16 @@ import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
+import { createPurchase } from '../services/api'
 
-// Checkout paso 3: revisión final del pedido.
+// Checkout paso 3: revisión final + creación real de la compra en el backend.
 function CheckoutSummary() {
   const navigate = useNavigate()
   const [accept, setAccept] = useState(false) // términos desmarcados por defecto
-  const { items, subtotal } = useCart()
-  const { shipping: shipAddr, payment } = useCheckout()
+  const [placing, setPlacing] = useState(false)
+  const [orderError, setOrderError] = useState('')
+  const { items, subtotal, cartId, clearLocal } = useCart()
+  const { shipping: shipAddr, payment, setLastOrder, reset } = useCheckout()
   const summary = buildCheckoutSummary(items, subtotal)
   const { count, shipping, discount, total } = summary
 
@@ -24,7 +27,28 @@ function CheckoutSummary() {
     else if (!payment) navigate('/checkout/pago', { replace: true })
   }, [shipAddr, payment, navigate])
 
-  const canFinish = accept && items.length > 0 && Boolean(shipAddr) && Boolean(payment)
+  const canFinish = accept && items.length > 0 && Boolean(shipAddr) && Boolean(payment) && Boolean(cartId)
+
+  // El carrito ya vive en el backend: solo se genera la compra a partir de él.
+  const finish = async () => {
+    if (!canFinish) return
+    setPlacing(true)
+    setOrderError('')
+    try {
+      const compra = await createPurchase(cartId, {
+        idMetodoPago: payment.idMetodoPago,
+        idDireccionEnvio: shipAddr.id,
+      })
+      setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
+      clearLocal() // el backend ya vació el carrito al crear la compra
+      reset()
+      navigate('/checkout/confirmacion')
+    } catch (err) {
+      setOrderError(err.message || 'No se pudo completar la compra')
+    } finally {
+      setPlacing(false)
+    }
+  }
 
   return (
     <CheckoutLayout step={3} brandSize="lg">
@@ -102,11 +126,12 @@ function CheckoutSummary() {
             block
             size="lg"
             iconLeft="lock"
-            disabled={!canFinish}
-            onClick={() => navigate('/checkout/confirmacion')}
+            disabled={!canFinish || placing}
+            onClick={finish}
           >
-            FINALIZAR COMPRA ({formatPrice(total)})
+            {placing ? 'PROCESANDO...' : `FINALIZAR COMPRA (${formatPrice(total)})`}
           </Button>
+          {orderError && <p className="auth-error" style={{ marginTop: 10 }}>{orderError}</p>}
           {!accept && <p className="totals-panel__hint">Debes aceptar los términos y condiciones para continuar.</p>}
           <div className="totals-panel__secure"><Icon name="shield" size={14} strokeFill /> Pago seguro encriptado</div>
         </aside>

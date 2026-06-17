@@ -74,11 +74,12 @@ function Profile() {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) { notify('Ingresá un correo electrónico válido.'); return }
       setSaving(true)
       try {
+        // No enviamos "rol": el backend solo permite cambiarlo a un admin y el usuario
+        // edita su propio perfil (enviarlo haría que un comprador reciba 403).
         const nextUser = await updateCurrentUser({
           nombre: profile?.nombre || '',
           email: emailVal,
           telefono: phone.trim(),
-          rol: profile?.rol || 'COMPRADOR',
         }, token)
         setProfile(nextUser)
         updateUser(nextUser)

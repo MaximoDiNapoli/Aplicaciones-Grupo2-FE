@@ -7,7 +7,7 @@ import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
-import { fetchAddresses } from '../services/api'
+import { fetchAddresses, createAddress } from '../services/api'
 
 const EMPTY_NEW = { nombre: '', calle: '', numero: '', cp: '', ciudad: '' }
 
@@ -19,6 +19,7 @@ function CheckoutShipping() {
   const [selected, setSelected] = useState('') // id de dirección guardada o 'nueva'
   const [nueva, setNueva] = useState(EMPTY_NEW)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   const { items, subtotal } = useCart()
   const checkoutSummary = buildCheckoutSummary(items, subtotal)
 
@@ -41,25 +42,38 @@ function CheckoutShipping() {
 
   const setField = (key, value) => { setNueva((n) => ({ ...n, [key]: value })); if (error) setError('') }
 
-  const submit = () => {
+  const submit = async () => {
     if (selected && selected !== 'nueva') {
       const addr = addresses.find((a) => a.id === selected)
       setShipping(addr)
       navigate('/checkout/pago')
       return
     }
-    // Dirección nueva: todos los campos obligatorios.
+    // Dirección nueva: todos los campos obligatorios; se crea en el backend.
     const { nombre, calle, numero, cp, ciudad } = nueva
     if (!nombre.trim() || !calle.trim() || !numero.trim() || !cp.trim() || !ciudad.trim()) {
       setError('Completá todos los datos de la nueva dirección o elegí una guardada.')
       return
     }
-    setShipping({
-      id: 'nueva',
-      label: nombre.trim(),
-      lines: [`${calle.trim()} ${numero.trim()}`, `${ciudad.trim()}, CP ${cp.trim()}`],
-    })
-    navigate('/checkout/pago')
+    setSaving(true)
+    try {
+      const creada = await createAddress({
+        direccion: `${calle.trim()} ${numero.trim()}`,
+        ciudad: ciudad.trim(),
+        codigoPostal: cp.trim(),
+        esPrincipal: addresses.length === 0,
+      })
+      setShipping({
+        id: creada.id,
+        label: nombre.trim(),
+        lines: [creada.direccion, [creada.ciudad, creada.codigoPostal].filter(Boolean).join(' ')],
+      })
+      navigate('/checkout/pago')
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar la dirección')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -114,7 +128,7 @@ function CheckoutShipping() {
       </div>
 
       <div className="checkout-footer">
-        <Button size="lg" iconRight="arrowRight" onClick={submit}>Continuar al Pago</Button>
+        <Button size="lg" iconRight="arrowRight" onClick={submit} disabled={saving}>{saving ? 'Guardando...' : 'Continuar al Pago'}</Button>
       </div>
     </CheckoutLayout>
   )

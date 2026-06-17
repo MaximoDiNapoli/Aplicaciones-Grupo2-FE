@@ -2,20 +2,24 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 
 // Store del checkout: guarda la dirección de envío y el método de pago elegidos
-// para compartirlos entre los pasos (envío -> pago -> resumen).
+// para compartirlos entre los pasos (envío -> pago -> resumen), y la última orden creada.
 const CheckoutContext = createContext(null)
 
 export function CheckoutProvider({ children }) {
   const [shipping, setShipping] = useState(null) // { id, label, lines: [] }
-  const [payment, setPayment] = useState(null) // { method, label, brand?, last4?, exp?, name? }
+  const [payment, setPayment] = useState(null) // { idMetodoPago, label, brand?, last4?, exp? }
+  const [lastOrder, setLastOrder] = useState(null) // { id, total, items }
 
   const value = useMemo(() => ({
     shipping,
     payment,
+    lastOrder,
     setShipping,
     setPayment,
+    setLastOrder,
+    // Limpia los datos del flujo, pero conserva lastOrder para la pantalla de confirmación.
     reset: () => { setShipping(null); setPayment(null) },
-  }), [shipping, payment])
+  }), [shipping, payment, lastOrder])
 
   return <CheckoutContext.Provider value={value}>{children}</CheckoutContext.Provider>
 }

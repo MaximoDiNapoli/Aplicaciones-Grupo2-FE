@@ -221,6 +221,52 @@ export async function fetchAddresses(token) {
   return request('/api/direcciones', { token })
 }
 
+export async function createAddress(payload, token) {
+  return request('/api/direcciones', { method: 'POST', body: payload, token })
+}
+
+export async function fetchPaymentMethods(token) {
+  return request('/api/metodos-pago', { token })
+}
+
+export async function fetchCarts(token) {
+  return request('/api/carrito', { token })
+}
+
+export async function createCart(nombre, token) {
+  return request('/api/carrito', { method: 'POST', body: { nombre }, token })
+}
+
+export async function fetchCartItems(cartId, token) {
+  return request(`/api/carrito/${cartId}/items`, { token })
+}
+
+export async function addCartItem(cartId, item, token) {
+  // El backend recalcula el precio final del producto; precioUnitario es requerido pero se ignora.
+  return request(`/api/carrito/${cartId}/items`, {
+    method: 'POST',
+    body: { idProducto: item.idProducto, cantidad: item.cantidad, precioUnitario: item.precioUnitario ?? 0 },
+    token,
+  })
+}
+
+export async function updateCartItem(itemId, item, token) {
+  return request(`/api/carrito/items/${itemId}`, {
+    method: 'PUT',
+    body: { idProducto: item.idProducto, cantidad: item.cantidad, precioUnitario: item.precioUnitario ?? 0 },
+    token,
+  })
+}
+
+export async function deleteCartItem(itemId, token) {
+  return request(`/api/carrito/items/${itemId}`, { method: 'DELETE', token })
+}
+
+// Crea una compra real a partir de un carrito persistido (descuenta stock y vacía el carrito).
+export async function createPurchase(cartId, payload, token) {
+  return request(`/api/compras/${cartId}`, { method: 'POST', body: payload, token })
+}
+
 export async function fetchCurrentUser(token) {
   return request('/api/users/me', { token })
 }

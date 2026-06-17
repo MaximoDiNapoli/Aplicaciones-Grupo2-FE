@@ -1,63 +1,60 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
-import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
 
-// Confirmación de compra: muestra lo realmente comprado y vacía el carrito.
+// Confirmación de compra: muestra la orden realmente creada en el backend.
 function CheckoutConfirmation() {
-  const { items, subtotal, clear } = useCart()
-  const { reset } = useCheckout()
-  // Snapshot del pedido en el primer render (antes de vaciar el carrito).
-  const [order] = useState(() => buildCheckoutSummary(items, subtotal))
-  const [orderNum] = useState(() => Math.floor(10000 + Math.random() * 89999))
+  const navigate = useNavigate()
+  const { lastOrder } = useCheckout()
 
-  // Vacía el carrito y limpia el checkout una sola vez al confirmar.
-  const cleared = useRef(false)
+  // Si se entra sin una orden recién creada, volvemos al historial de compras.
   useEffect(() => {
-    if (cleared.current) return
-    cleared.current = true
-    clear()
-    reset()
-  }, [clear, reset])
+    if (!lastOrder) navigate('/compras', { replace: true })
+  }, [lastOrder, navigate])
+
+  if (!lastOrder) return null
+
+  const itemsList = lastOrder.items || []
 
   return (
     <PublicStoreLayout>
       <div className="confirmation">
         <div className="confirmation__art">🎉🍬🐻</div>
-        <h1 className="confirmation__title">¡Pedido #{orderNum} Confirmado!</h1>
+        <h1 className="confirmation__title">¡Pedido #{lastOrder.id} Confirmado!</h1>
         <p className="confirmation__sub">
           Tu safari de dulces está siendo preparado con mucho cuidado. Te enviaremos un correo cuando inicie su viaje.
         </p>
 
         <div className="confirmation__cards">
           <div className="confirm-card confirm-card--eta">
-            <span className="confirm-card__label"><Icon name="truck" size={18} strokeFill /> Estimado de Entrega</span>
-            <div className="confirm-card__date">Jueves, 24 de Oct.</div>
-            <div className="confirm-card__note">Envío Safari Express</div>
+            <span className="confirm-card__label"><Icon name="truck" size={18} strokeFill /> Estado del Pedido</span>
+            <div className="confirm-card__date">Registrado</div>
+            <div className="confirm-card__note">Seguí su estado desde Mis Compras</div>
           </div>
           <div className="confirm-card confirm-card--summary">
             <span className="confirm-card__label confirm-card__label--brand"><Icon name="bag" size={18} strokeFill /> Resumen de lo comprado</span>
             <ul className="confirm-card__items">
-              {order.items.map((it) => (
+              {itemsList.map((it) => (
                 <li key={it.id}>
                   <span>{it.name} <em>x{it.qty}</em></span>
                   <span>{formatPrice(it.price)}</span>
                 </li>
               ))}
-              {order.items.length === 0 && <li><span>Sin artículos</span></li>}
+              {itemsList.length === 0 && <li><span>Sin artículos</span></li>}
             </ul>
             <div className="confirm-card__total">
               <span>Total Pagado</span>
-              <span className="confirm-card__total-value">{formatPrice(order.total)}</span>
+              <span className="confirm-card__total-value">{formatPrice(lastOrder.total)}</span>
             </div>
           </div>
         </div>
 
         <div className="confirmation__actions">
-          <Button to="/compras" iconLeft="truck">Rastrear Pedido</Button>
+          <Button to={`/compras/${lastOrder.id}`} iconLeft="truck">Ver Detalle del Pedido</Button>
           <Button to="/" variant="outline" iconLeft="home">Volver al Inicio</Button>
         </div>
       </div>

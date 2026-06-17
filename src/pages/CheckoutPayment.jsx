@@ -7,20 +7,17 @@ import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
-
-const methods = [
-  { id: 'tarjeta', label: 'Tarjeta de Crédito / Débito', icon: 'card' },
-  { id: 'paypal', label: 'PayPal', icon: 'bank' },
-  { id: 'transferencia', label: 'Transferencia Bancaria', icon: 'bank' },
-]
+import { fetchPaymentMethods } from '../services/api'
 
 const EMPTY_CARD = { number: '', exp: '', cvv: '', name: '' }
+const isCardMethod = (tipo = '') => /tarjeta|credito|crédito|debito|débito/i.test(tipo)
 
-// Checkout paso 2: método de pago (con validación de los datos de tarjeta).
+// Checkout paso 2: método de pago (lista real del backend + validación de tarjeta).
 function CheckoutPayment() {
   const navigate = useNavigate()
   const { shipping, setPayment } = useCheckout()
-  const [method, setMethod] = useState('tarjeta')
+  const [methods, setMethods] = useState([])
+  const [methodId, setMethodId] = useState(null)
   const [card, setCard] = useState(EMPTY_CARD)
   const [save, setSave] = useState(true)
   const [error, setError] = useState('')
@@ -32,26 +29,39 @@ function CheckoutPayment() {
     if (!shipping) navigate('/checkout/envio', { replace: true })
   }, [shipping, navigate])
 
+  useEffect(() => {
+    let alive = true
+    fetchPaymentMethods()
+      .then((rows) => {
+        if (!alive) return
+        setMethods(rows)
+        setMethodId(rows[0]?.id ?? null)
+      })
+      .catch(() => { if (alive) setMethods([]) })
+    return () => { alive = false }
+  }, [])
+
   const setField = (key, value) => { setCard((c) => ({ ...c, [key]: value })); if (error) setError('') }
+  const selectedMethod = methods.find((m) => m.id === methodId)
 
   const submit = () => {
-    if (method === 'tarjeta') {
+    if (!selectedMethod) { setError('Elegí un método de pago.'); return }
+    if (isCardMethod(selectedMethod.tipo)) {
       const number = card.number.replace(/\s+/g, '')
       if (!/^\d{13,19}$/.test(number)) { setError('Ingresá un número de tarjeta válido (13 a 19 dígitos).'); return }
       if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(card.exp.trim())) { setError('Ingresá el vencimiento en formato MM/AA.'); return }
       if (!/^\d{3,4}$/.test(card.cvv.trim())) { setError('El CVV debe tener 3 o 4 dígitos.'); return }
       if (!card.name.trim()) { setError('Ingresá el nombre que figura en la tarjeta.'); return }
       setPayment({
-        method: 'tarjeta',
-        label: 'Tarjeta de Crédito / Débito',
-        brand: 'Tarjeta',
+        idMetodoPago: selectedMethod.id,
+        label: selectedMethod.tipo,
+        brand: selectedMethod.tipo,
         last4: number.slice(-4),
         exp: card.exp.trim(),
         name: card.name.trim(),
       })
     } else {
-      const label = methods.find((m) => m.id === method)?.label || method
-      setPayment({ method, label })
+      setPayment({ idMetodoPago: selectedMethod.id, label: selectedMethod.tipo })
     }
     navigate('/checkout/resumen')
   }
@@ -65,15 +75,15 @@ function CheckoutPayment() {
 
           <div className="payment-methods">
             {methods.map((m) => {
-              const sel = method === m.id
+              const sel = methodId === m.id
               return (
                 <div key={m.id} className={`payment-method${sel ? ' is-selected' : ''}`}>
-                  <button className="payment-method__head" onClick={() => { setMethod(m.id); if (error) setError('') }}>
-                    <Icon name={m.icon} size={22} strokeFill className="payment-method__icon" />
-                    <span className="payment-method__label">{m.label}</span>
+                  <button className="payment-method__head" onClick={() => { setMethodId(m.id); if (error) setError('') }}>
+                    <Icon name={isCardMethod(m.tipo) ? 'card' : 'bank'} size={22} strokeFill className="payment-method__icon" />
+                    <span className="payment-method__label">{m.tipo}</span>
                     <span className={`radio-dot${sel ? ' is-on' : ''}`} />
                   </button>
-                  {sel && m.id === 'tarjeta' && (
+                  {sel && isCardMethod(m.tipo) && (
                     <div className="card-form">
                       <TextInput label="Número de Tarjeta" icon="card" placeholder="0000 0000 0000 0000" value={card.number} onChange={(e) => setField('number', e.target.value)} inputMode="numeric" />
                       <div className="form-row">
@@ -83,12 +93,13 @@ function CheckoutPayment() {
                       <TextInput label="Nombre en la tarjeta" placeholder="Ej. Jane Doe" value={card.name} onChange={(e) => setField('name', e.target.value)} />
                     </div>
                   )}
-                  {sel && m.id !== 'tarjeta' && (
-                    <div className="card-form"><p className="checkout-sub" style={{ margin: 0 }}>Confirmarás el pago con {m.label} al finalizar la compra.</p></div>
+                  {sel && !isCardMethod(m.tipo) && (
+                    <div className="card-form"><p className="checkout-sub" style={{ margin: 0 }}>Confirmarás el pago con {m.tipo} al finalizar la compra.</p></div>
                   )}
                 </div>
               )
             })}
+            {methods.length === 0 && <p className="checkout-sub">No se pudieron cargar los métodos de pago.</p>}
           </div>
 
           {error && <p className="auth-error">{error}</p>}
