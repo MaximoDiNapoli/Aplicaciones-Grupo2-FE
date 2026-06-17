@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AdminLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Button from '../../components/ui/Button'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { useToast } from '../../store/toast'
 import { fetchOrders } from '../../services/api'
 
 // Gestión Global de Ventas: filtros (vendedor, método de pago) + tabla con comisión y estado.
 function AdminSales() {
-  const notify = useToast()
   const [seller, setSeller] = useState('Todos los usuarios')
   const [method, setMethod] = useState('Todos los métodos')
   const [orders, setOrders] = useState([])
@@ -77,7 +76,7 @@ function AdminSales() {
         {error && <div className="adm-table__empty">{error}</div>}
         {!loading && !error && slice.map((s) => (
           <div className="adm-table__row" key={s.id} style={{ gridTemplateColumns: '0.8fr 1.4fr 1.2fr 1.3fr 1fr 1fr 1fr' }}>
-            <button type="button" className="adm-link adm-link--btn" onClick={() => notify(`Detalle de la transacción #${s.id} (demo)`)}>{s.id}</button>
+            <Link className="adm-link adm-link--btn" to={`/compras/${s.id}`}>{s.id}</Link>
             <span className="adm-muted">{s.date}</span>
             <span className="adm-strong">{s.customer}</span>
             <span>{s.seller}</span>

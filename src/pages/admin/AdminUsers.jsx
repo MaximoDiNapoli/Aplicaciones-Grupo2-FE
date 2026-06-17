@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react'
 import { AdminLayout, PageTitle, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
+import { TextInput, Select } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { useToast } from '../../store/toast'
 import { adminPaymentProviders } from '../../data/mock'
-import { deleteUser, fetchUsers } from '../../services/api'
+import { createUser, deleteUser, fetchUsers, updateUser } from '../../services/api'
 
-// Gestión de Usuarios + panel de Métodos de Pago (pasarelas).
+const ROLES = ['COMPRADOR', 'VENDEDOR', 'ADMINISTRADOR']
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Gestión de Usuarios + panel de Métodos de Pago (pasarelas, demo sin backend).
 function AdminUsers() {
   const notify = useToast()
   const [q, setQ] = useState('')
   const [role, setRole] = useState('Todos los Roles')
-  const [status, setStatus] = useState('Todos los Estados')
   const [users, setUsers] = useState([])
   const [providers, setProviders] = useState(adminPaymentProviders)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  // form = null | { id?, nombre, email, telefono, rol, password }
+  const [form, setForm] = useState(null)
+  const [formError, setFormError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -28,6 +36,7 @@ function AdminUsers() {
           id: user.id,
           name: user.nombre,
           email: user.email,
+          telefono: user.telefono || '',
           role: user.rol || 'COMPRADOR',
           activity: user.createdAt ? `Registrado ${new Date(user.createdAt).toLocaleDateString('es-AR')}` : 'Sin actividad',
           status: 'Activo',
@@ -43,7 +52,37 @@ function AdminUsers() {
       })
 
     return () => { alive = false }
-  }, [])
+  }, [reloadKey])
+
+  const openCreate = () => { setFormError(''); setForm({ nombre: '', email: '', telefono: '', rol: 'COMPRADOR', password: '' }) }
+  const openEdit = (u) => { setFormError(''); setForm({ id: u.id, nombre: u.name, email: u.email, telefono: u.telefono, rol: u.role, password: '' }) }
+  const closeForm = () => { setForm(null); setFormError('') }
+  const setField = (key, value) => { setForm((f) => ({ ...f, [key]: value })); if (formError) setFormError('') }
+
+  const saveForm = async () => {
+    const nombre = form.nombre.trim()
+    const email = form.email.trim()
+    if (!nombre || !email) { setFormError('Nombre y email son obligatorios.'); return }
+    if (!EMAIL_RE.test(email)) { setFormError('Ingresá un email válido.'); return }
+    if (!form.id && form.password.length < 6) { setFormError('La contraseña debe tener al menos 6 caracteres.'); return }
+    setSaving(true)
+    try {
+      const payload = { nombre, email, telefono: form.telefono.trim(), rol: form.rol }
+      if (form.id) {
+        await updateUser(form.id, payload)
+        notify(`Usuario "${nombre}" actualizado`)
+      } else {
+        await createUser({ ...payload, password: form.password })
+        notify(`Usuario "${nombre}" creado`)
+      }
+      closeForm()
+      setReloadKey((k) => k + 1)
+    } catch (err) {
+      setFormError(err.message || 'No se pudo guardar el usuario')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const removeUser = async (id, name) => {
     try {
@@ -61,31 +100,42 @@ function AdminUsers() {
     const text = `${u.name} ${u.email} ${u.id}`.toLowerCase()
     if (q && !text.includes(q.toLowerCase())) return false
     if (role !== 'Todos los Roles' && u.role !== role) return false
-    if (status !== 'Todos los Estados' && u.status !== status.toLowerCase()) return false
     return true
   })
-  const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 4, `${q}|${role}|${status}`)
+  const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 4, `${q}|${role}`)
 
   return (
     <AdminLayout active="usuarios">
       <PageTitle
         title="Gestión de Usuarios"
         subtitle="Administra clientes y vendedores de la plataforma."
-        actions={<Button iconLeft="plus" onClick={() => notify('Formulario de nuevo usuario (demo)')}>Nuevo Usuario</Button>}
+        actions={<Button iconLeft="plus" onClick={openCreate}>Nuevo Usuario</Button>}
       />
+
+      {form && (
+        <section className="form-card" style={{ marginBottom: 20 }}>
+          <h2 className="form-card__title">{form.id ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
+          <div className="filter-fields">
+            <TextInput label="Nombre *" value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} />
+            <TextInput label="Email *" type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} />
+            <TextInput label="Teléfono" value={form.telefono} onChange={(e) => setField('telefono', e.target.value)} />
+            <Select label="Rol" value={form.rol} onChange={(e) => setField('rol', e.target.value)} options={ROLES} />
+            {!form.id && <TextInput label="Contraseña *" type="password" value={form.password} onChange={(e) => setField('password', e.target.value)} />}
+          </div>
+          {formError && <p className="auth-error">{formError}</p>}
+          <div className="dash-pagetitle__actions" style={{ marginTop: 12 }}>
+            <Button variant="outline" onClick={closeForm} disabled={saving}>Cancelar</Button>
+            <Button iconLeft="check" onClick={saveForm} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
+          </div>
+        </section>
+      )}
 
       <div className="filter-fields">
         <label className="field"><span className="field__label">Buscar</span>
           <span className="field__control field__control--icon"><Icon name="search" size={18} strokeFill className="field__icon" /><input className="field__input" placeholder="Nombre, email o ID" value={q} onChange={(e) => setQ(e.target.value)} /></span>
         </label>
         <label className="field"><span className="field__label">Rol</span>
-          <span className="field__control field__control--select"><select className="field__input" value={role} onChange={(e) => setRole(e.target.value)}><option>Todos los Roles</option><option>Cliente</option><option>Vendedor</option></select></span>
-        </label>
-        <label className="field"><span className="field__label">Estado</span>
-          <span className="field__control field__control--select"><select className="field__input" value={status} onChange={(e) => setStatus(e.target.value)}><option>Todos los Estados</option><option>Activo</option><option>Suspendido</option></select></span>
-        </label>
-        <label className="field"><span className="field__label">Fecha de Registro</span>
-          <span className="field__control"><input className="field__input" type="date" /></span>
+          <span className="field__control field__control--select"><select className="field__input" value={role} onChange={(e) => setRole(e.target.value)}><option>Todos los Roles</option>{ROLES.map((r) => <option key={r}>{r}</option>)}</select></span>
         </label>
       </div>
 
@@ -102,11 +152,11 @@ function AdminUsers() {
               <Avatar name={u.name} tone={['pink', 'orange', 'mint'][i % 3]} />
               <span><span className="adm-strong">{u.name}</span><br /><span className="adm-muted">{u.email}</span></span>
             </span>
-            <span><Pill tone={u.role === 'Vendedor' ? 'pink' : 'neutral'}>{u.role}</Pill></span>
+            <span><Pill tone={u.role === 'VENDEDOR' ? 'pink' : u.role === 'ADMINISTRADOR' ? 'brand' : 'neutral'}>{cap(u.role)}</Pill></span>
             <span>{u.activity}</span>
             <span><span className={`dot-status dot-status--${pillTone(u.status)}`} />{cap(u.status)}</span>
             <span className="adm-actions ta-right">
-              <button className="icon-action" aria-label="Editar" onClick={() => notify(`Editar a ${u.name} (demo)`)}><Icon name="pencil" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Editar" onClick={() => openEdit(u)}><Icon name="pencil" size={17} strokeFill /></button>
               <button className="icon-action" aria-label="Eliminar" onClick={() => removeUser(u.id, u.name)}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
@@ -121,9 +171,8 @@ function AdminUsers() {
       <div className="dash-pagetitle" style={{ marginTop: 36 }}>
         <div>
           <h2 className="dash-pagetitle__title" style={{ fontSize: 26 }}>Métodos de Pago</h2>
-          <p className="dash-pagetitle__sub">Gestiona las pasarelas activas, comisiones y credenciales de API para la tienda.</p>
+          <p className="dash-pagetitle__sub">Gestiona las pasarelas activas (demo: sin backend dedicado).</p>
         </div>
-        <Button iconLeft="plus" onClick={() => notify('Añadir nueva pasarela (demo)')}>Añadir Pasarela</Button>
       </div>
       <div className="provider-grid">
         {providers.map((p) => (
@@ -141,7 +190,6 @@ function AdminUsers() {
               </button>
             </div>
             <div className="provider-card__state"><span className="adm-muted">Estado</span><Pill tone={p.enabled ? 'pink' : 'neutral'}>{p.enabled ? 'Activo' : 'Inactivo'}</Pill></div>
-            <Button variant="outline" block iconLeft="lock" onClick={() => notify(`Editar credenciales de ${p.name} (demo)`)}>Editar Credenciales</Button>
           </section>
         ))}
       </div>

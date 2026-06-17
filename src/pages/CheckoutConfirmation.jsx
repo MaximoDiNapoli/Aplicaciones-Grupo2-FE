@@ -4,21 +4,24 @@ import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import { useCart, buildCheckoutSummary } from '../store/cart'
+import { useCheckout } from '../store/checkout'
 
 // Confirmación de compra: muestra lo realmente comprado y vacía el carrito.
 function CheckoutConfirmation() {
   const { items, subtotal, clear } = useCart()
+  const { reset } = useCheckout()
   // Snapshot del pedido en el primer render (antes de vaciar el carrito).
   const [order] = useState(() => buildCheckoutSummary(items, subtotal))
   const [orderNum] = useState(() => Math.floor(10000 + Math.random() * 89999))
 
-  // Vacía el carrito una sola vez al confirmar.
+  // Vacía el carrito y limpia el checkout una sola vez al confirmar.
   const cleared = useRef(false)
   useEffect(() => {
     if (cleared.current) return
     cleared.current = true
     clear()
-  }, [clear])
+    reset()
+  }, [clear, reset])
 
   return (
     <PublicStoreLayout>

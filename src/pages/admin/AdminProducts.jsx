@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AdminLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
 import Icon from '../../components/ui/Icon'
@@ -93,7 +94,7 @@ function AdminProducts() {
             <span className="ta-right">{formatPrice(p.price)}</span>
             <span><Pill tone={pillTone(p.status)}>{cap(p.status)}</Pill></span>
             <span className="adm-actions ta-right">
-              <button className="icon-action" aria-label="Ver" onClick={() => notify(`Ver "${p.name}" (demo)`)}><Icon name="eye" size={18} strokeFill /></button>
+              <Link className="icon-action" aria-label="Ver" to={`/producto/${p.id}`}><Icon name="eye" size={18} strokeFill /></Link>
               <button className="icon-action" aria-label="Eliminar" onClick={async () => {
                 try {
                   await deleteProduct(p.id)

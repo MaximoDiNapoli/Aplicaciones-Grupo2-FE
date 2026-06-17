@@ -1,12 +1,22 @@
+import { useEffect, useState } from 'react'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import EmptyState from '../components/common/EmptyState'
 import SectionHeader from '../components/common/SectionHeader'
 import ProductGrid from '../components/product/ProductGrid'
-import { products } from '../data/mock'
+import { fetchProducts } from '../services/api'
 
-// Sin Resultados de búsqueda + recomendaciones.
+// Sin Resultados de búsqueda + recomendaciones (reales del backend).
 function NoResults() {
-  const recommended = products.slice(2, 6)
+  const [recommended, setRecommended] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    fetchProducts()
+      .then((products) => { if (alive) setRecommended(products.slice(2, 6)) })
+      .catch(() => { if (alive) setRecommended([]) })
+    return () => { alive = false }
+  }, [])
+
   return (
     <PublicStoreLayout>
       <EmptyState
@@ -16,10 +26,12 @@ function NoResults() {
         message="No encontramos rastros de «Golosinas de dragón» en nuestra selva dulce."
         actions={[{ children: 'Volver a la tienda', to: '/catalogo', iconLeft: 'arrowLeft' }]}
       />
-      <section className="home-section">
-        <SectionHeader title="También te puede gustar" actionLabel="Ver todo" to="/catalogo" />
-        <ProductGrid products={recommended} columns={4} compact />
-      </section>
+      {recommended.length > 0 && (
+        <section className="home-section">
+          <SectionHeader title="También te puede gustar" actionLabel="Ver todo" to="/catalogo" />
+          <ProductGrid products={recommended} columns={4} compact />
+        </section>
+      )}
     </PublicStoreLayout>
   )
 }

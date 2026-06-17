@@ -205,6 +205,22 @@ export async function createUser(payload, token) {
   return request('/api/users', { method: 'POST', body: payload, token })
 }
 
+export async function updateUser(id, payload, token) {
+  return request(`/api/users/${id}`, { method: 'PUT', body: payload, token })
+}
+
+export async function fetchEstados(token) {
+  return request('/api/estados', { token })
+}
+
+export async function updateOrderStatus(id, idEstado, token) {
+  return request(`/api/compras/${id}`, { method: 'PUT', body: { idEstado }, token })
+}
+
+export async function fetchAddresses(token) {
+  return request('/api/direcciones', { token })
+}
+
 export async function fetchCurrentUser(token) {
   return request('/api/users/me', { token })
 }
