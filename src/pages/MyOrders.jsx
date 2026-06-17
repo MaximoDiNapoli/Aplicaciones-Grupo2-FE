@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AccountLayout from '../components/layout/AccountLayout'
 import { StatusChip } from '../components/ui/Badge'
 import { formatPrice } from '../components/ui/Misc'
-import { orders } from '../data/mock'
+import { fetchOrders } from '../services/api'
 
 const tabs = [
   { id: 'todos', label: 'Todos' },
@@ -15,7 +15,39 @@ const tabs = [
 // Mis Compras: tabs de estado + tabla de órdenes.
 function MyOrders() {
   const [tab, setTab] = useState('todos')
-  const rows = tab === 'todos' ? orders : orders.filter((o) => o.status === tab)
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+
+    fetchOrders()
+      .then((nextOrders) => {
+        if (!alive) return
+        setOrders(nextOrders.map((order) => ({
+          id: order.id,
+          date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
+          total: Number(order.total || 0),
+          status: String(order.estado?.nombre || 'procesando').toLowerCase(),
+        })))
+        setError('')
+      })
+      .catch((err) => {
+        if (!alive) return
+        setError(err.message || 'No se pudieron cargar las compras')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+
+    return () => { alive = false }
+  }, [])
+
+  const rows = useMemo(
+    () => (tab === 'todos' ? orders : orders.filter((o) => o.status === tab)),
+    [orders, tab],
+  )
 
   return (
     <AccountLayout activeItem="cuenta">
@@ -42,7 +74,9 @@ function MyOrders() {
           <span>Estado</span>
           <span className="ta-right">Acción</span>
         </div>
-        {rows.map((o) => (
+        {loading && <div className="orders-table__row"><span>Cargando compras...</span></div>}
+        {error && <div className="orders-table__row"><span>{error}</span></div>}
+        {!loading && !error && rows.map((o) => (
           <div className="orders-table__row" key={o.id}>
             <span className="orders-table__id">#{o.id}</span>
             <span className="orders-table__muted">{o.date}</span>
@@ -53,6 +87,7 @@ function MyOrders() {
             </span>
           </div>
         ))}
+        {!loading && !error && rows.length === 0 && <div className="orders-table__row"><span>No hay compras para este filtro.</span></div>}
       </div>
     </AccountLayout>
   )

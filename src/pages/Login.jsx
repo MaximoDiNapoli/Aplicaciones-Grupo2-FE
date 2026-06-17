@@ -4,15 +4,14 @@ import AuthLayout from '../components/layout/AuthLayout'
 import { TextInput, PasswordInput, Checkbox } from '../components/ui/Field'
 import Button from '../components/ui/Button'
 import { useAuth } from '../store/auth'
+import { login, resolveSessionFromToken } from '../services/api'
 
-// Login unificado. NOTA: sin selección manual de rol (corrección de la profesora):
-// el rol se obtiene de las credenciales (simula el rol del token), no de tabs en pantalla.
-// Demo: el destino depende de lo que se escriba en "Correo":
-//   contiene "admin"    -> panel de administrador
-//   contiene "vendedor" -> panel de vendedor
-//   en otro caso        -> tienda (usuario)
-// Contraseña única de demostración para todas las cuentas.
-const DEMO_PASSWORD = '123'
+function landingPath(rol = '') {
+  const normalized = String(rol).trim().toUpperCase()
+  if (normalized.includes('ADMIN')) return '/admin'
+  if (normalized.includes('VENDEDOR')) return '/vendedor'
+  return '/'
+}
 
 function Login() {
   const navigate = useNavigate()
@@ -21,17 +20,29 @@ function Login() {
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const submit = (e) => {
+  const [loading, setLoading] = useState(false)
+  const submit = async (e) => {
     e.preventDefault()
-    if (password !== DEMO_PASSWORD) {
-      setError('Contraseña incorrecta. La contraseña de demostración es 123.')
+    const email = account.trim()
+    if (!email || !password) {
+      setError('Ingresá tu correo y contraseña.')
       return
     }
-    setError('')
-    const value = account.trim().toLowerCase()
-    if (value.includes('admin')) { signIn('admin'); navigate('/admin') }
-    else if (value.includes('vendedor')) { signIn('vendedor'); navigate('/vendedor') }
-    else { signIn('cliente'); navigate('/') }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Ingresá un correo electrónico válido.')
+      return
+    }
+    setLoading(true)
+    try {
+      const auth = await login({ email, password })
+      const session = await resolveSessionFromToken(auth.accessToken)
+      signIn(session || { token: auth.accessToken, user: null })
+      navigate(landingPath(session?.user?.rol))
+    } catch (err) {
+      setError(err.message || 'No fue posible iniciar sesión')
+    } finally {
+      setLoading(false)
+    }
   }
   const enterAsGuest = () => { signInAsGuest(); navigate('/') }
   return (
@@ -49,19 +60,19 @@ function Login() {
         <TextInput
           label="Correo Electrónico"
           icon="mail"
-          placeholder="usuario, vendedor o admin"
+          placeholder="usuario@ejemplo.com"
           value={account}
-          onChange={(e) => setAccount(e.target.value)}
+          onChange={(e) => { setAccount(e.target.value); if (error) setError('') }}
         />
         <PasswordInput
           label="Contraseña"
-          placeholder="123"
+          placeholder="Tu contraseña"
           value={password}
           onChange={(e) => { setPassword(e.target.value); if (error) setError('') }}
         />
         {error && <p className="auth-error">{error}</p>}
         <Checkbox label="Recordarme" checked={remember} onChange={() => setRemember((v) => !v)} />
-        <Button type="submit" block size="lg" iconRight="arrowRight">Entrar al Safari</Button>
+        <Button type="submit" block size="lg" iconRight="arrowRight" disabled={loading}>{loading ? 'Ingresando...' : 'Entrar al Safari'}</Button>
       </form>
 
       <div className="auth-divider"><span>o</span></div>

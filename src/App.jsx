@@ -35,8 +35,8 @@ import AdminCategories from './pages/admin/AdminCategories'
 
 // Bloquea el checkout a los invitados (sin cuenta): los manda al login.
 function RequireAccount({ children }) {
-  const { isGuest } = useAuth()
-  if (isGuest) return <Navigate to="/login" replace />
+  const { user, isGuest } = useAuth()
+  if (!user || isGuest) return <Navigate to="/login" replace />
   return children
 }
 

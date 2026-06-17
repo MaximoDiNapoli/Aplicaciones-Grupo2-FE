@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { clearStoredSession, getStoredToken, getStoredUser, saveStoredSession } from '../services/api'
 
 // Estado de sesión (demo, en memoria).
 // user = null            -> visitante normal (puede comprar)
@@ -8,15 +9,28 @@ import { createContext, useContext, useMemo, useState } from 'react'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [session, setSession] = useState(() => {
+    const token = getStoredToken()
+    const user = getStoredUser()
+    return token || user ? { token, user, guest: false } : null
+  })
+
+  useEffect(() => {
+    saveStoredSession(session)
+  }, [session])
 
   const value = useMemo(() => ({
-    user,
-    isGuest: user?.guest === true,
-    signIn: (role) => setUser({ role, guest: false }),
-    signInAsGuest: () => setUser({ role: 'invitado', guest: true }),
-    signOut: () => setUser(null),
-  }), [user])
+    user: session?.user || null,
+    token: session?.token || '',
+    isGuest: session?.guest === true,
+    signIn: ({ token, user }) => setSession({ token: token || '', user: user || null, guest: false }),
+    signInAsGuest: () => setSession({ token: '', user: null, guest: true }),
+    updateUser: (user) => setSession((current) => (current ? { ...current, user, guest: false } : { token: '', user, guest: false })),
+    signOut: () => {
+      clearStoredSession()
+      setSession(null)
+    },
+  }), [session])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

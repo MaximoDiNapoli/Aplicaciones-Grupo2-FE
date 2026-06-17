@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import CheckoutLayout from '../components/layout/CheckoutLayout'
 import ProductImage from '../components/product/ProductImage'
@@ -7,15 +7,47 @@ import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import { useCart, buildCheckoutSummary } from '../store/cart'
+import { useCheckout } from '../store/checkout'
+import { createPurchase } from '../services/api'
 
-// Checkout paso 3: revisión final del pedido.
+// Checkout paso 3: revisión final + creación real de la compra en el backend.
 function CheckoutSummary() {
   const navigate = useNavigate()
   const [accept, setAccept] = useState(false) // términos desmarcados por defecto
-  const { items, subtotal } = useCart()
+  const [placing, setPlacing] = useState(false)
+  const [orderError, setOrderError] = useState('')
+  const { items, subtotal, cartId, clearLocal } = useCart()
+  const { shipping: shipAddr, payment, setLastOrder, reset } = useCheckout()
   const summary = buildCheckoutSummary(items, subtotal)
   const { count, shipping, discount, total } = summary
-  const canFinish = accept && items.length > 0
+
+  // Sin dirección o método de pago, volvemos al paso correspondiente.
+  useEffect(() => {
+    if (!shipAddr) navigate('/checkout/envio', { replace: true })
+    else if (!payment) navigate('/checkout/pago', { replace: true })
+  }, [shipAddr, payment, navigate])
+
+  const canFinish = accept && items.length > 0 && Boolean(shipAddr) && Boolean(payment) && Boolean(cartId)
+
+  // El carrito ya vive en el backend: solo se genera la compra a partir de él.
+  const finish = async () => {
+    if (!canFinish) return
+    setPlacing(true)
+    setOrderError('')
+    try {
+      const compra = await createPurchase(cartId, {
+        idMetodoPago: payment.idMetodoPago,
+        idDireccionEnvio: shipAddr.id,
+      })
+      setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
+      clearLocal() // el backend ya vació el carrito al crear la compra
+      navigate(`/compras/${compra.id}`, { replace: true })
+    } catch (err) {
+      setOrderError(err.message || 'No se pudo completar la compra')
+    } finally {
+      setPlacing(false)
+    }
+  }
 
   return (
     <CheckoutLayout step={3} brandSize="lg">
@@ -29,8 +61,8 @@ function CheckoutSummary() {
                 <span className="review-card__heading"><Icon name="pin" size={16} strokeFill /> DIRECCIÓN DE ENVÍO</span>
                 <Link to="/checkout/envio" className="review-card__edit">Editar <Icon name="pencil" size={13} strokeFill /></Link>
               </header>
-              <div className="review-card__name">Valeria Explorer</div>
-              <div className="review-card__lines">Calle de los Dulces 123, Depto 4B<br />Ciudad de Caramelo, CP 04120</div>
+              <div className="review-card__name">{shipAddr?.label || 'Sin dirección'}</div>
+              <div className="review-card__lines">{(shipAddr?.lines || []).map((l, i) => <span key={i}>{l}<br /></span>)}</div>
             </section>
             <section className="review-card">
               <header className="review-card__head">
@@ -38,10 +70,12 @@ function CheckoutSummary() {
                 <Link to="/checkout/pago" className="review-card__edit">Editar <Icon name="pencil" size={13} strokeFill /></Link>
               </header>
               <div className="review-card__pay">
-                <span className="card-chip">VISA</span>
+                <span className="card-chip">{payment?.brand || payment?.label || 'Pago'}</span>
                 <div>
-                  <div className="review-card__name">Terminada en •••• 4242</div>
-                  <div className="review-card__lines">Exp: 12/25</div>
+                  <div className="review-card__name">
+                    {payment?.method === 'tarjeta' ? `Terminada en •••• ${payment.last4}` : (payment?.label || 'Método de pago')}
+                  </div>
+                  {payment?.method === 'tarjeta' && <div className="review-card__lines">Exp: {payment.exp}</div>}
                 </div>
               </div>
             </section>
@@ -91,11 +125,12 @@ function CheckoutSummary() {
             block
             size="lg"
             iconLeft="lock"
-            disabled={!canFinish}
-            onClick={() => navigate('/checkout/confirmacion')}
+            disabled={!canFinish || placing}
+            onClick={finish}
           >
-            FINALIZAR COMPRA ({formatPrice(total)})
+            {placing ? 'PROCESANDO...' : `FINALIZAR COMPRA (${formatPrice(total)})`}
           </Button>
+          {orderError && <p className="auth-error" style={{ marginTop: 10 }}>{orderError}</p>}
           {!accept && <p className="totals-panel__hint">Debes aceptar los términos y condiciones para continuar.</p>}
           <div className="totals-panel__secure"><Icon name="shield" size={14} strokeFill /> Pago seguro encriptado</div>
         </aside>

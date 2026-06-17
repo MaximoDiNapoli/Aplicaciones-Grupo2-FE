@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SellerLayout, PageTitle, StatCard, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { sellerSales } from '../../data/mock'
+import { fetchOrders } from '../../services/api'
 
 const saleStatuses = ['Todos', 'Pendiente', 'Procesando', 'Enviado', 'Entregado', 'Cancelado']
 
@@ -12,22 +12,53 @@ const saleStatuses = ['Todos', 'Pendiente', 'Procesando', 'Enviado', 'Entregado'
 function SellerSales() {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('Todos')
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const filtered = sellerSales.rows.filter((o) => {
+  useEffect(() => {
+    let alive = true
+
+    fetchOrders()
+      .then((nextOrders) => {
+        if (!alive) return
+        setOrders(nextOrders.map((order) => ({
+          id: order.id,
+          customer: `Usuario #${order.idUsuario}`,
+          items: order.detalles?.length || 1,
+          total: Number(order.total || 0),
+          status: String(order.estado?.nombre || 'pendiente').toLowerCase(),
+          date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
+        })))
+        setError('')
+      })
+      .catch((err) => {
+        if (!alive) return
+        setError(err.message || 'No se pudieron cargar las ventas')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+
+    return () => { alive = false }
+  }, [])
+
+  const filtered = orders.filter((o) => {
     const text = `${o.customer} ${o.id}`.toLowerCase()
     if (q && !text.includes(q.toLowerCase())) return false
     if (status !== 'Todos' && o.status !== status.toLowerCase()) return false
     return true
   })
   const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 5, `${q}|${status}`)
+  const totalRevenue = useMemo(() => orders.reduce((sum, order) => sum + order.total, 0), [orders])
 
   return (
     <SellerLayout active="ventas">
       <PageTitle title="Mis Ventas" subtitle="Gestiona y da seguimiento a las ventas de tu tienda." />
 
       <div className="kpi-grid kpi-grid--2">
-        <StatCard label="TOTAL DE ÓRDENES" value={sellerSales.totalOrders.toLocaleString('es-MX')} icon="receipt" tone="mint" />
-        <StatCard label="TOTAL DE INGRESOS" value={formatPrice(sellerSales.totalRevenue)} icon="dollar" tone="orange" />
+        <StatCard label="TOTAL DE ÓRDENES" value={loading ? '...' : orders.length.toLocaleString('es-MX')} icon="receipt" tone="mint" />
+        <StatCard label="TOTAL DE INGRESOS" value={loading ? '...' : formatPrice(totalRevenue)} icon="dollar" tone="orange" />
       </div>
 
       <div className="search-toolbar">
@@ -44,7 +75,9 @@ function SellerSales() {
         <div className="adm-table__head" style={{ gridTemplateColumns: '1fr 1.4fr 0.7fr 1fr 1fr 1.1fr 0.8fr' }}>
           <span># Orden</span><span>Cliente</span><span className="ta-right">Items</span><span className="ta-right">Total</span><span>Estado</span><span>Fecha</span><span className="ta-right">Acciones</span>
         </div>
-        {slice.map((o) => (
+        {loading && <div className="adm-table__empty">Cargando ventas...</div>}
+        {!loading && error && <div className="adm-table__empty">{error}</div>}
+        {!loading && !error && slice.map((o) => (
           <div className="adm-table__row" key={o.id} style={{ gridTemplateColumns: '1fr 1.4fr 0.7fr 1fr 1fr 1.1fr 0.8fr' }}>
             <Link to={`/vendedor/ventas/${o.id}`} className="adm-link">#{o.id}</Link>
             <span className="adm-strong">{o.customer}</span>
@@ -55,7 +88,7 @@ function SellerSales() {
             <Link to={`/vendedor/ventas/${o.id}`} className="icon-action ta-right" aria-label="Ver"><Icon name="eye" size={18} strokeFill /></Link>
           </div>
         ))}
-        {total === 0 && <div className="adm-table__empty">No hay ventas que coincidan con los filtros.</div>}
+        {!loading && !error && total === 0 && <div className="adm-table__empty">No hay ventas que coincidan con los filtros.</div>}
         <div className="adm-table__foot">
           <span className="adm-muted">Mostrando {from} a {to} de {total} resultados</span>
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />

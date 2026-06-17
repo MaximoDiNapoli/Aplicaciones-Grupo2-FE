@@ -1,23 +1,54 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AdminLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Button from '../../components/ui/Button'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { useToast } from '../../store/toast'
-import { adminGlobalSales } from '../../data/mock'
-
-const sellers = ['Todos los vendedores', ...new Set(adminGlobalSales.map((s) => s.seller))]
-const methods = ['Todos los métodos', 'Tarjeta', 'PayPal', 'Transferencia']
+import { fetchOrders } from '../../services/api'
 
 // Gestión Global de Ventas: filtros (vendedor, método de pago) + tabla con comisión y estado.
 function AdminSales() {
-  const notify = useToast()
-  const [seller, setSeller] = useState('Todos los vendedores')
+  const [seller, setSeller] = useState('Todos los usuarios')
   const [method, setMethod] = useState('Todos los métodos')
-  const clear = () => { setSeller('Todos los vendedores'); setMethod('Todos los métodos') }
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const filtered = adminGlobalSales.filter((s) => {
-    if (seller !== 'Todos los vendedores' && s.seller !== seller) return false
+  useEffect(() => {
+    let alive = true
+
+    fetchOrders()
+      .then((nextOrders) => {
+        if (!alive) return
+        setOrders(nextOrders.map((order) => ({
+          id: order.id,
+          date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
+          customer: `Usuario #${order.idUsuario}`,
+          seller: `Usuario #${order.idUsuario}`,
+          total: Number(order.total || 0),
+          commission: Number(order.total || 0) * 0.1,
+          status: String(order.estado?.nombre || 'pendiente').toLowerCase(),
+          method: order.metodoPago?.tipo || order.metodoPago?.nombre || `Método #${order.idMetodoPago || '-'}`,
+        })))
+        setError('')
+      })
+      .catch((err) => {
+        if (!alive) return
+        setError(err.message || 'No se pudieron cargar las ventas')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+
+    return () => { alive = false }
+  }, [])
+
+  const sellers = useMemo(() => ['Todos los usuarios', ...new Set(orders.map((order) => order.seller))], [orders])
+  const methods = useMemo(() => ['Todos los métodos', ...new Set(orders.map((order) => order.method))], [orders])
+  const clear = () => { setSeller('Todos los usuarios'); setMethod('Todos los métodos') }
+
+  const filtered = orders.filter((s) => {
+    if (seller !== 'Todos los usuarios' && s.seller !== seller) return false
     if (method !== 'Todos los métodos' && s.method !== method) return false
     return true
   })
@@ -39,11 +70,13 @@ function AdminSales() {
 
       <div className="adm-table">
         <div className="adm-table__head" style={{ gridTemplateColumns: '0.8fr 1.4fr 1.2fr 1.3fr 1fr 1fr 1fr' }}>
-          <span>Orden #</span><span>Fecha</span><span>Cliente</span><span>Vendedor</span><span className="ta-right">Total</span><span className="ta-right">Comisión</span><span>Estado de Pago</span>
+          <span>Orden #</span><span>Fecha</span><span>Usuario</span><span>Método</span><span className="ta-right">Total</span><span className="ta-right">Comisión</span><span>Estado de Pago</span>
         </div>
-        {slice.map((s) => (
+        {loading && <div className="adm-table__empty">Cargando ventas...</div>}
+        {error && <div className="adm-table__empty">{error}</div>}
+        {!loading && !error && slice.map((s) => (
           <div className="adm-table__row" key={s.id} style={{ gridTemplateColumns: '0.8fr 1.4fr 1.2fr 1.3fr 1fr 1fr 1fr' }}>
-            <button type="button" className="adm-link adm-link--btn" onClick={() => notify(`Detalle de la transacción #${s.id} (demo)`)}>{s.id}</button>
+            <Link className="adm-link adm-link--btn" to={`/compras/${s.id}`}>{s.id}</Link>
             <span className="adm-muted">{s.date}</span>
             <span className="adm-strong">{s.customer}</span>
             <span>{s.seller}</span>
@@ -52,7 +85,7 @@ function AdminSales() {
             <span><Pill tone={pillTone(s.status)}>{cap(s.status).toUpperCase()}</Pill></span>
           </div>
         ))}
-        {total === 0 && <div className="adm-table__empty">No hay transacciones que coincidan con los filtros.</div>}
+        {!loading && !error && total === 0 && <div className="adm-table__empty">No hay transacciones que coincidan con los filtros.</div>}
         <div className="adm-table__foot">
           <span className="adm-muted">Mostrando {from} a {to} de {total} transacciones</span>
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
