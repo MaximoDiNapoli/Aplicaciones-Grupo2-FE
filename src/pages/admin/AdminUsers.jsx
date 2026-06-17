@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AdminLayout, PageTitle, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { useToast } from '../../store/toast'
-import { adminUsers, adminPaymentProviders } from '../../data/mock'
+import { adminPaymentProviders } from '../../data/mock'
+import { deleteUser, fetchUsers } from '../../services/api'
 
 // Gestión de Usuarios + panel de Métodos de Pago (pasarelas).
 function AdminUsers() {
@@ -12,10 +13,47 @@ function AdminUsers() {
   const [q, setQ] = useState('')
   const [role, setRole] = useState('Todos los Roles')
   const [status, setStatus] = useState('Todos los Estados')
-  const [users, setUsers] = useState(adminUsers)
+  const [users, setUsers] = useState([])
   const [providers, setProviders] = useState(adminPaymentProviders)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const removeUser = (id, name) => { setUsers((list) => list.filter((u) => u.id !== id)); notify(`Usuario ${name} eliminado`) }
+  useEffect(() => {
+    let alive = true
+
+    fetchUsers()
+      .then((nextUsers) => {
+        if (!alive) return
+        setUsers(nextUsers.map((user) => ({
+          id: user.id,
+          name: user.nombre,
+          email: user.email,
+          role: user.rol || 'COMPRADOR',
+          activity: user.createdAt ? `Registrado ${new Date(user.createdAt).toLocaleDateString('es-AR')}` : 'Sin actividad',
+          status: 'Activo',
+        })))
+        setError('')
+      })
+      .catch((err) => {
+        if (!alive) return
+        setError(err.message || 'No se pudieron cargar los usuarios')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+
+    return () => { alive = false }
+  }, [])
+
+  const removeUser = async (id, name) => {
+    try {
+      await deleteUser(id)
+      setUsers((list) => list.filter((u) => u.id !== id))
+      notify(`Usuario ${name} eliminado`)
+    } catch (err) {
+      notify(err.message || 'No se pudo eliminar el usuario')
+    }
+  }
   const toggleProvider = (id) =>
     setProviders((list) => list.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))
 
@@ -55,7 +93,9 @@ function AdminUsers() {
         <div className="adm-table__head" style={{ gridTemplateColumns: '0.8fr 2fr 1fr 1.2fr 1fr 0.9fr' }}>
           <span>ID</span><span>Usuario</span><span>Rol</span><span>Actividad</span><span>Estado</span><span className="ta-right">Acciones</span>
         </div>
-        {slice.map((u, i) => (
+        {loading && <div className="adm-table__empty">Cargando usuarios...</div>}
+        {error && <div className="adm-table__empty">{error}</div>}
+        {!loading && !error && slice.map((u, i) => (
           <div className="adm-table__row" key={u.id} style={{ gridTemplateColumns: '0.8fr 2fr 1fr 1.2fr 1fr 0.9fr' }}>
             <span className="adm-muted">{u.id}</span>
             <span className="adm-cell-user">
@@ -71,7 +111,7 @@ function AdminUsers() {
             </span>
           </div>
         ))}
-        {total === 0 && <div className="adm-table__empty">No hay usuarios que coincidan con los filtros.</div>}
+        {!loading && !error && total === 0 && <div className="adm-table__empty">No hay usuarios que coincidan con los filtros.</div>}
         <div className="adm-table__foot">
           <span className="adm-muted">Mostrando {from} a {to} de {total} usuarios</span>
           <Pagination variant="mini" page={page} totalPages={totalPages} onChange={setPage} />

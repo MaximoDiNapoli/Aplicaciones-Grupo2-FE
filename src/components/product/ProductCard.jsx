@@ -37,7 +37,7 @@ function ProductCard({ product, compact = false }) {
         </button>
       </Link>
       <div className="product-card__body">
-        {product.category && <span className="product-card__cat">{categoryLabel(product.category)}</span>}
+        {product.category && <span className="product-card__cat">{product.categoryName || categoryLabel(product.category) || product.category}</span>}
         <Link to={`/producto/${product.id}`} className="product-card__name">{product.name}</Link>
         {!compact && product.tagline && <p className="product-card__tagline">{product.tagline}</p>}
         <div className="product-card__footer">

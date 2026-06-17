@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import ProductImage from '../components/product/ProductImage'
 import ProductGrid from '../components/product/ProductGrid'
@@ -9,18 +9,53 @@ import { Badge, Tag } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { useCart } from '../store/cart'
-import { productDetail as p, reviews, products } from '../data/mock'
+import { fetchProductById, fetchProducts } from '../services/api'
+import { reviews } from '../data/mock'
 
 // Detalle de producto: galería + ficha + reseñas + relacionados.
 function ProductDetail() {
   const { addItem } = useCart()
   const navigate = useNavigate()
+  const { id } = useParams()
   const [active, setActive] = useState(0)
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
-  const related = products.slice(0, 4)
+  const [product, setProduct] = useState(null)
+  const [related, setRelated] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const cartProduct = { ...p, g: p.gallery[active] }
+  useEffect(() => {
+    let alive = true
+
+    Promise.all([fetchProductById(id), fetchProducts()])
+      .then(([nextProduct, allProducts]) => {
+        if (!alive) return
+        setProduct(nextProduct)
+        setRelated(allProducts.filter((item) => item.id !== nextProduct.id && item.category === nextProduct.category).slice(0, 4))
+        setActive(0)
+        setError('')
+      })
+      .catch((err) => {
+        if (!alive) return
+        setError(err.message || 'No se pudo cargar el producto')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+
+    return () => { alive = false }
+  }, [id])
+
+  if (loading) {
+    return <PublicStoreLayout><p className="catalog__empty">Cargando detalle del producto...</p></PublicStoreLayout>
+  }
+
+  if (error || !product) {
+    return <PublicStoreLayout><p className="catalog__empty">{error || 'No encontramos este producto.'}</p></PublicStoreLayout>
+  }
+
+  const cartProduct = { ...product, g: product.gallery[active] }
   const addToCart = () => {
     addItem(cartProduct, qty)
     setAdded(true)
@@ -34,19 +69,19 @@ function ProductDetail() {
   return (
     <PublicStoreLayout>
       <nav className="breadcrumbs">
-        {p.breadcrumbs.map((b, i) => (
+        {product.breadcrumbs.map((b, i) => (
           <span key={b}>
             {i > 0 && <span className="breadcrumbs__sep">›</span>}
-            <span className={i === p.breadcrumbs.length - 1 ? 'breadcrumbs__current' : ''}>{b}</span>
+            <span className={i === product.breadcrumbs.length - 1 ? 'breadcrumbs__current' : ''}>{b}</span>
           </span>
         ))}
       </nav>
 
       <div className="pdp">
         <div className="pdp__gallery">
-          <ProductImage g={p.gallery[active]} className="pdp__main" />
+          <ProductImage g={product.gallery[active]} className="pdp__main" />
           <div className="pdp__thumbs">
-            {p.gallery.map((g, i) => (
+            {product.gallery.map((g, i) => (
               <button
                 key={i}
                 className={`pdp__thumb${i === active ? ' is-active' : ''}`}
@@ -60,17 +95,17 @@ function ProductDetail() {
         </div>
 
         <div className="pdp__info">
-          <Badge tone="mint" className="pdp__stock-badge"><Icon name="checkCircle" size={13} strokeFill /> {p.stock}</Badge>
-          <h1 className="pdp__title">{p.name}</h1>
+          <Badge tone={product.badge?.tone || 'mint'} className="pdp__stock-badge"><Icon name="checkCircle" size={13} strokeFill /> {product.stock > 0 ? `En stock (${product.stock})` : 'Agotado'}</Badge>
+          <h1 className="pdp__title">{product.name}</h1>
           <div className="pdp__rating">
-            <RatingStars value={p.rating} count={p.reviews} />
+            <RatingStars value={product.rating} count={product.reviews} />
           </div>
           <div className="pdp__price">
-            <PriceDisplay price={p.price} oldPrice={p.oldPrice} size="lg" />
+            <PriceDisplay price={product.price} oldPrice={product.oldPrice} size="lg" />
           </div>
-          <p className="pdp__desc">{p.description}</p>
+          <p className="pdp__desc">{product.description}</p>
           <div className="pdp__tags">
-            {p.features.map((f) => (
+            {product.features.map((f) => (
               <Tag key={f} icon={f === 'Sin Gluten' ? 'check' : f === 'Artesanal' ? 'sparkles' : 'shield'}>{f}</Tag>
             ))}
           </div>

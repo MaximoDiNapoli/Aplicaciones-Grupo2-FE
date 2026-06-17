@@ -1,12 +1,39 @@
+import { useEffect, useState } from 'react'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import CategoryCard from '../components/product/CategoryCard'
 import ProductGrid from '../components/product/ProductGrid'
 import SectionHeader from '../components/common/SectionHeader'
 import Button from '../components/ui/Button'
-import { categories, products } from '../data/mock'
+import { fetchCategories, fetchProducts } from '../services/api'
 
 // Inicio - hero + habitats (categorías) + descubrimientos destacados.
 function Home() {
+  const [categories, setCategories] = useState([])
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+
+    Promise.all([fetchCategories(), fetchProducts()])
+      .then(([nextCategories, nextProducts]) => {
+        if (!alive) return
+        setCategories(nextCategories)
+        setProducts(nextProducts)
+        setError('')
+      })
+      .catch((err) => {
+        if (!alive) return
+        setError(err.message || 'No se pudo cargar el catálogo')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+
+    return () => { alive = false }
+  }, [])
+
   const featured = products.slice(0, 3)
   return (
     <PublicStoreLayout>
@@ -24,16 +51,25 @@ function Home() {
 
       <section className="home-section">
         <h2 className="home-section__center-title">Explora los Hábitats</h2>
-        <div className="category-grid">
-          {categories.map((c) => (
-            <CategoryCard key={c.id} category={c} />
-          ))}
-        </div>
+        {error && <p className="catalog__empty">{error}</p>}
+        {!error && loading ? (
+          <p className="catalog__empty">Cargando categorías y productos desde el backend...</p>
+        ) : (
+          <div className="category-grid">
+            {categories.map((c) => (
+              <CategoryCard key={c.id} category={c} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="home-section">
         <SectionHeader title="Descubrimientos Destacados" actionLabel="Ver Todo" to="/catalogo" />
-        <ProductGrid products={featured} columns={3} />
+        {loading && featured.length === 0 ? (
+          <p className="catalog__empty">Cargando productos destacados...</p>
+        ) : (
+          <ProductGrid products={featured} columns={3} />
+        )}
       </section>
     </PublicStoreLayout>
   )
