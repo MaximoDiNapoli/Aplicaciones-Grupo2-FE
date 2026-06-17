@@ -41,8 +41,7 @@ function CheckoutSummary() {
       })
       setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
       clearLocal() // el backend ya vació el carrito al crear la compra
-      reset()
-      navigate('/checkout/confirmacion')
+      navigate(`/compras/${compra.id}`, { replace: true })
     } catch (err) {
       setOrderError(err.message || 'No se pudo completar la compra')
     } finally {

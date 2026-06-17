@@ -7,6 +7,7 @@ import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
+import { useAuth } from '../store/auth'
 import { fetchAddresses, createAddress } from '../services/api'
 
 const EMPTY_NEW = { nombre: '', calle: '', numero: '', cp: '', ciudad: '' }
@@ -14,6 +15,7 @@ const EMPTY_NEW = { nombre: '', calle: '', numero: '', cp: '', ciudad: '' }
 // Checkout paso 1: dirección de envío (direcciones reales del backend + validación).
 function CheckoutShipping() {
   const navigate = useNavigate()
+  const { user, isGuest } = useAuth()
   const { setShipping } = useCheckout()
   const [addresses, setAddresses] = useState([])
   const [selected, setSelected] = useState('') // id de dirección guardada o 'nueva'
@@ -43,6 +45,10 @@ function CheckoutShipping() {
   const setField = (key, value) => { setNueva((n) => ({ ...n, [key]: value })); if (error) setError('') }
 
   const submit = async () => {
+    if (!user || isGuest) {
+      navigate('/login', { replace: true })
+      return
+    }
     if (selected && selected !== 'nueva') {
       const addr = addresses.find((a) => a.id === selected)
       setShipping(addr)
