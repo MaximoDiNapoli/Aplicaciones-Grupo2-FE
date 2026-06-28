@@ -1,47 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { fetchSellerProducts } from '../../services/api'
+import {
+  selectProducts,
+  selectProductsError,
+  selectProductsLoading,
+} from '../../features/products/productsSlice'
+import { loadSellerProducts } from '../../features/products/productsThunks'
 
 // Mis Productos (inventario). Flujo unificado: listado + CTA flotante "Crear Nuevo Producto"
-// que lleva a la pantalla de creación separada (corrección de la profesora #6).
+// que lleva a la pantalla de creación separada. Inventario desde el slice `products`.
 function SellerProducts() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const rawProducts = useSelector(selectProducts)
+  const loading = useSelector(selectProductsLoading)
+  const error = useSelector(selectProductsError)
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('Todas')
   const [status, setStatus] = useState('Todos')
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadSellerProducts())
+  }, [dispatch])
 
-    fetchSellerProducts()
-      .then((nextProducts) => {
-        if (!alive) return
-        setProducts(nextProducts.map((product) => ({
-          ...product,
-          category: product.categoryName,
-          sold: Math.max(0, product.stock * 2),
-          status: product.stock > 0 ? 'Activo' : 'Inactivo',
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar los productos')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [])
+  const products = useMemo(() => rawProducts.map((product) => ({
+    ...product,
+    category: product.categoryName,
+    sold: Math.max(0, product.stock * 2),
+    status: product.stock > 0 ? 'Activo' : 'Inactivo',
+  })), [rawProducts])
 
   const productCats = useMemo(() => ['Todas', ...new Set(products.map((p) => p.category))], [products])
 

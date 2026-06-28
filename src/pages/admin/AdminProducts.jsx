@@ -1,53 +1,48 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { AdminLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { useToast } from '../../store/toast'
-import { deleteProduct, fetchProducts } from '../../services/api'
+import { notify } from '../../features/ui/toastSlice'
+import {
+  selectProducts,
+  selectProductsError,
+  selectProductsLoading,
+} from '../../features/products/productsSlice'
+import { deleteProductThunk, loadProducts } from '../../features/products/productsThunks'
 
 // Catálogo Global de Productos (admin): busca/filtra y modera inventario de vendedores.
+// El listado/loading/error vienen del store de Redux (slice `products`).
 function AdminProducts() {
-  const notify = useToast()
+  const dispatch = useDispatch()
+  const products = useSelector(selectProducts)
+  const loading = useSelector(selectProductsLoading)
+  const error = useSelector(selectProductsError)
+
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('Todas las Categorías')
   const [status, setStatus] = useState('Todos los Estados')
   const [stock, setStock] = useState('Stock')
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadProducts())
+  }, [dispatch])
 
-    fetchProducts()
-      .then((nextProducts) => {
-        if (!alive) return
-        setProducts(nextProducts.map((product) => ({
-          ...product,
-          sku: `P-${String(product.id).padStart(4, '0')}`,
-          seller: product.categoryName || 'Sistema',
-          status: product.stock > 0 ? 'Publicado' : 'Pendiente',
-          stockLabel: product.stock > 10 ? 'En stock' : product.stock > 0 ? 'Bajo' : 'Agotado',
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar los productos')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
+  // Campos derivados para la tabla de moderación (SKU, vendedor, estado, etiqueta de stock).
+  const rows = useMemo(() => products.map((product) => ({
+    ...product,
+    sku: `P-${String(product.id).padStart(4, '0')}`,
+    seller: product.categoryName || 'Sistema',
+    status: product.stock > 0 ? 'Publicado' : 'Pendiente',
+    stockLabel: product.stock > 10 ? 'En stock' : product.stock > 0 ? 'Bajo' : 'Agotado',
+  })), [products])
 
-    return () => { alive = false }
-  }, [])
+  const cats = useMemo(() => ['Todas las Categorías', ...new Set(rows.map((p) => p.categoryName))], [rows])
 
-  const cats = useMemo(() => ['Todas las Categorías', ...new Set(products.map((p) => p.categoryName))], [products])
-
-  const filtered = products.filter((p) => {
+  const filtered = rows.filter((p) => {
     const text = `${p.name} ${p.sku} ${p.seller}`.toLowerCase()
     if (q && !text.includes(q.toLowerCase())) return false
     if (cat !== 'Todas las Categorías' && p.categoryName !== cat) return false
@@ -56,6 +51,15 @@ function AdminProducts() {
     return true
   })
   const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 4, `${q}|${cat}|${status}|${stock}`)
+
+  const removeProduct = async (id, name) => {
+    const action = await dispatch(deleteProductThunk(id))
+    if (action.error) {
+      dispatch(notify(action.payload || 'No se pudo eliminar el producto'))
+      return
+    }
+    dispatch(notify(`Producto "${name}" eliminado`))
+  }
 
   return (
     <AdminLayout active="catalogo">
@@ -95,15 +99,7 @@ function AdminProducts() {
             <span><Pill tone={pillTone(p.status)}>{cap(p.status)}</Pill></span>
             <span className="adm-actions ta-right">
               <Link className="icon-action" aria-label="Ver" to={`/producto/${p.id}`}><Icon name="eye" size={18} strokeFill /></Link>
-              <button className="icon-action" aria-label="Eliminar" onClick={async () => {
-                try {
-                  await deleteProduct(p.id)
-                  setProducts((list) => list.filter((item) => item.id !== p.id))
-                  notify(`Producto "${p.name}" eliminado`)
-                } catch (err) {
-                  notify(err.message || 'No se pudo eliminar el producto')
-                }
-              }}><Icon name="trash" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Eliminar" onClick={() => removeProduct(p.id, p.name)}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
         ))}

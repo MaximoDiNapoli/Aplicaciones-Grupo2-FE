@@ -1,47 +1,37 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { AdminLayout, PageTitle, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Button from '../../components/ui/Button'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { fetchOrders } from '../../services/api'
+import { selectOrders, selectOrdersError, selectOrdersLoading } from '../../features/orders/ordersSlice'
+import { loadOrders } from '../../features/orders/ordersThunks'
 
 // Gestión Global de Ventas: filtros (vendedor, método de pago) + tabla con comisión y estado.
+// Las transacciones provienen del slice `orders`.
 function AdminSales() {
+  const dispatch = useDispatch()
+  const rawOrders = useSelector(selectOrders)
+  const loading = useSelector(selectOrdersLoading)
+  const error = useSelector(selectOrdersError)
   const [seller, setSeller] = useState('Todos los usuarios')
   const [method, setMethod] = useState('Todos los métodos')
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadOrders())
+  }, [dispatch])
 
-    fetchOrders()
-      .then((nextOrders) => {
-        if (!alive) return
-        setOrders(nextOrders.map((order) => ({
-          id: order.id,
-          date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
-          customer: `Usuario #${order.idUsuario}`,
-          seller: `Usuario #${order.idUsuario}`,
-          total: Number(order.total || 0),
-          commission: Number(order.total || 0) * 0.1,
-          status: String(order.estado?.nombre || 'pendiente').toLowerCase(),
-          method: order.metodoPago?.tipo || order.metodoPago?.nombre || `Método #${order.idMetodoPago || '-'}`,
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar las ventas')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [])
+  const orders = useMemo(() => rawOrders.map((order) => ({
+    id: order.id,
+    date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
+    customer: `Usuario #${order.idUsuario}`,
+    seller: `Usuario #${order.idUsuario}`,
+    total: Number(order.total || 0),
+    commission: Number(order.total || 0) * 0.1,
+    status: String(order.estado?.nombre || 'pendiente').toLowerCase(),
+    method: order.metodoPago?.tipo || order.metodoPago?.nombre || `Método #${order.idMetodoPago || '-'}`,
+  })), [rawOrders])
 
   const sellers = useMemo(() => ['Todos los usuarios', ...new Set(orders.map((order) => order.seller))], [orders])
   const methods = useMemo(() => ['Todos los métodos', ...new Set(orders.map((order) => order.method))], [orders])

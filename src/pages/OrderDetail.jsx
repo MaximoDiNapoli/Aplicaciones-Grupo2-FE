@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
 import OrderStatusStepper from '../components/common/OrderStatusStepper'
@@ -7,55 +8,44 @@ import ProductImage from '../components/product/ProductImage'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
-import { useToast } from '../store/toast'
-import { fetchOrderById, fetchOrderItems, fetchProducts } from '../services/api'
+import { notify } from '../features/ui/toastSlice'
+import {
+  selectCurrentOrder,
+  selectOrderItems,
+  selectOrdersError,
+} from '../features/orders/ordersSlice'
+import { loadOrderById, loadOrderItems } from '../features/orders/ordersThunks'
+import { selectProducts } from '../features/products/productsSlice'
+import { loadProducts } from '../features/products/productsThunks'
 
-// Detalle de Compra: estado, items, totales, dirección y método de pago.
+// Detalle de Compra: estado, items, totales, dirección y método de pago (slices orders+products).
 function OrderDetail() {
-  const notify = useToast()
   const { id } = useParams()
-  const [order, setOrder] = useState(null)
-  const [items, setItems] = useState([])
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dispatch = useDispatch()
+  const current = useSelector(selectCurrentOrder)
+  const items = useSelector(selectOrderItems)
+  const products = useSelector(selectProducts)
+  const error = useSelector(selectOrdersError)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadOrderById(id))
+    dispatch(loadOrderItems(id))
+    dispatch(loadProducts())
+  }, [dispatch, id])
 
-    Promise.all([fetchOrderById(id), fetchOrderItems(id), fetchProducts().catch(() => [])])
-      .then(([nextOrder, nextItems, nextProducts]) => {
-        if (!alive) return
-        setOrder(nextOrder)
-        setItems(nextItems)
-        setProducts(nextProducts)
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudo cargar el detalle')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [id])
+  // Guarda de id: el detalle del store debe corresponder a la ruta actual.
+  const order = current && String(current.id) === String(id) ? current : null
 
   const productById = useMemo(() => Object.fromEntries(products.map((product) => [product.id, product])), [products])
   const steps = useMemo(() => {
-    const current = String(order?.estado?.nombre || 'procesando').toLowerCase()
+    const cur = String(order?.estado?.nombre || 'procesando').toLowerCase()
     const labels = ['pendiente', 'procesando', 'enviado', 'entregado']
     return labels.map((label) => ({ id: label, label: label.charAt(0).toUpperCase() + label.slice(1), icon: label === 'procesando' ? 'refresh' : label === 'enviado' ? 'truck' : label === 'entregado' ? 'home' : 'checkCircle' }))
-      .map((step, index) => ({ ...step, active: labels.indexOf(current) >= index }))
+      .map((step, index) => ({ ...step, active: labels.indexOf(cur) >= index }))
   }, [order])
 
-  if (loading) {
-    return <div className="page"><PublicHeader /><p className="catalog__empty">Cargando detalle de compra...</p><Footer /></div>
-  }
-
-  if (error || !order) {
-    return <div className="page"><PublicHeader /><p className="catalog__empty">{error || 'No encontramos esta compra.'}</p><Footer /></div>
+  if (!order) {
+    return <div className="page"><PublicHeader /><p className="catalog__empty">{error ? error : 'Cargando detalle de compra...'}</p><Footer /></div>
   }
 
   const status = String(order.estado?.nombre || 'procesando').toLowerCase()
@@ -88,7 +78,7 @@ function OrderDetail() {
             <h1 className="order-detail__id">Orden #{order.id}</h1>
             <p className="order-detail__date">Realizada el {order.fechaCompra ? new Date(order.fechaCompra).toLocaleString('es-AR') : 'Sin fecha'}</p>
           </div>
-          <Button iconLeft="download" onClick={() => notify(`Descargando factura de la orden #${order.id}…`)}>Descargar Factura</Button>
+          <Button iconLeft="download" onClick={() => dispatch(notify(`Descargando factura de la orden #${order.id}…`))}>Descargar Factura</Button>
         </div>
 
         <section className="card order-status">

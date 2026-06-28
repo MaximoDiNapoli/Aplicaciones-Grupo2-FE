@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import ProductImage from '../components/product/ProductImage'
 import ProductGrid from '../components/product/ProductGrid'
@@ -9,50 +10,52 @@ import { Badge, Tag } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 import { useCart } from '../store/cart'
-import { fetchProductById, fetchProducts } from '../services/api'
+import {
+  selectCurrentProduct,
+  selectProducts,
+  selectProductsError,
+} from '../features/products/productsSlice'
+import { loadProductById, loadProducts } from '../features/products/productsThunks'
 import { reviews } from '../data/mock'
 
-// Detalle de producto: galería + ficha + reseñas + relacionados.
+// Detalle de producto: galería + ficha + reseñas + relacionados (slice `products`).
 function ProductDetail() {
   const { addItem } = useCart()
   const navigate = useNavigate()
   const { id } = useParams()
+  const dispatch = useDispatch()
+  const current = useSelector(selectCurrentProduct)
+  const allProducts = useSelector(selectProducts)
+  const error = useSelector(selectProductsError)
   const [active, setActive] = useState(0)
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
-  const [product, setProduct] = useState(null)
-  const [related, setRelated] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [prevId, setPrevId] = useState(id)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadProductById(id))
+    dispatch(loadProducts())
+  }, [dispatch, id])
 
-    Promise.all([fetchProductById(id), fetchProducts()])
-      .then(([nextProduct, allProducts]) => {
-        if (!alive) return
-        setProduct(nextProduct)
-        setRelated(allProducts.filter((item) => item.id !== nextProduct.id && item.category === nextProduct.category).slice(0, 4))
-        setActive(0)
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudo cargar el producto')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [id])
-
-  if (loading) {
-    return <PublicStoreLayout><p className="catalog__empty">Cargando detalle del producto...</p></PublicStoreLayout>
+  // Reinicia la vista de galería al cambiar de producto (ajuste durante el render).
+  if (id !== prevId) {
+    setPrevId(id)
+    setActive(0)
   }
 
-  if (error || !product) {
-    return <PublicStoreLayout><p className="catalog__empty">{error || 'No encontramos este producto.'}</p></PublicStoreLayout>
+  // Guarda de id: ignoramos el producto en el store hasta que coincida con la ruta actual.
+  const product = current && String(current.id) === String(id) ? current : null
+  const related = useMemo(
+    () => (product ? allProducts.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 4) : []),
+    [allProducts, product],
+  )
+
+  if (!product) {
+    return (
+      <PublicStoreLayout>
+        <p className="catalog__empty">{error ? error : 'Cargando detalle del producto...'}</p>
+      </PublicStoreLayout>
+    )
   }
 
   const cartProduct = { ...product, g: product.gallery[active] }

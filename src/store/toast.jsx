@@ -1,31 +1,33 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { notify as notifyThunk, selectToasts } from '../features/ui/toastSlice'
 
-// Notificaciones efímeras (toasts) para confirmar acciones en la demo.
-const ToastContext = createContext(null)
+// Compatibilidad: devuelve la misma función `notify(message)` de antes, pero ahora
+// despacha el thunk de Redux que agrega el toast y lo descarta automáticamente.
+export function useToast() {
+  const dispatch = useDispatch()
+  return (message) => dispatch(notifyThunk(message))
+}
 
-export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([])
-  const notify = useCallback((message) => {
-    const id = Math.random().toString(36).slice(2)
-    setToasts((t) => [...t, { id, message }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2600)
-  }, [])
-
+// Render de la pila de toasts leyendo el estado global. Sustituye al ToastProvider:
+// se monta una vez en la app y muestra las notificaciones del slice `toast`.
+export function ToastViewport() {
+  const toasts = useSelector(selectToasts)
   return (
-    <ToastContext.Provider value={notify}>
-      {children}
-      <div className="toast-stack">
-        {toasts.map((t) => (
-          <div key={t.id} className="toast">{t.message}</div>
-        ))}
-      </div>
-    </ToastContext.Provider>
+    <div className="toast-stack">
+      {toasts.map((t) => (
+        <div key={t.id} className="toast">{t.message}</div>
+      ))}
+    </div>
   )
 }
 
-export function useToast() {
-  const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error('useToast debe usarse dentro de ToastProvider')
-  return ctx
+// Passthrough para no romper el import existente en main.jsx.
+export function ToastProvider({ children }) {
+  return (
+    <>
+      {children}
+      <ToastViewport />
+    </>
+  )
 }

@@ -1,47 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout, PageTitle, StatCard, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { formatPrice } from '../../components/ui/Misc'
-import { fetchOrders } from '../../services/api'
+import { selectOrders, selectOrdersError, selectOrdersLoading } from '../../features/orders/ordersSlice'
+import { loadOrders } from '../../features/orders/ordersThunks'
 
 const saleStatuses = ['Todos', 'Pendiente', 'Procesando', 'Enviado', 'Entregado', 'Cancelado']
 
-// Mis Ventas (vendedor): KPIs + buscador/filtros + tabla de órdenes.
+// Mis Ventas (vendedor): KPIs + buscador/filtros + tabla de órdenes (slice `orders`).
 function SellerSales() {
+  const dispatch = useDispatch()
+  const rawOrders = useSelector(selectOrders)
+  const loading = useSelector(selectOrdersLoading)
+  const error = useSelector(selectOrdersError)
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('Todos')
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadOrders())
+  }, [dispatch])
 
-    fetchOrders()
-      .then((nextOrders) => {
-        if (!alive) return
-        setOrders(nextOrders.map((order) => ({
-          id: order.id,
-          customer: `Usuario #${order.idUsuario}`,
-          items: order.detalles?.length || 1,
-          total: Number(order.total || 0),
-          status: String(order.estado?.nombre || 'pendiente').toLowerCase(),
-          date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar las ventas')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [])
+  const orders = useMemo(() => rawOrders.map((order) => ({
+    id: order.id,
+    customer: `Usuario #${order.idUsuario}`,
+    items: order.detalles?.length || 1,
+    total: Number(order.total || 0),
+    status: String(order.estado?.nombre || 'pendiente').toLowerCase(),
+    date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
+  })), [rawOrders])
 
   const filtered = orders.filter((o) => {
     const text = `${o.customer} ${o.id}`.toLowerCase()

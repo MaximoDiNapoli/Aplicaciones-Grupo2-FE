@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout } from '../../components/dashboard/shells'
 import { TextInput, Select } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
-import { useToast } from '../../store/toast'
-import { useAuth } from '../../store/auth'
-import { fetchCategories, createProduct } from '../../services/api'
+import { notify } from '../../features/ui/toastSlice'
+import { selectCategories } from '../../features/categories/categoriesSlice'
+import { loadCategories } from '../../features/categories/categoriesThunks'
+import { createProductThunk } from '../../features/products/productsThunks'
 
-// Crear Producto: formulario controlado con validacion + alta real contra el backend.
+// Crear Producto: formulario controlado con validación + alta real (thunk createProduct).
 function SellerCreateProduct() {
   const navigate = useNavigate()
-  const notify = useToast()
-  const { token } = useAuth()
-  const [categories, setCategories] = useState([])
+  const dispatch = useDispatch()
+  const categories = useSelector(selectCategories)
   const [nombre, setNombre] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -29,8 +30,8 @@ function SellerCreateProduct() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetchCategories().then(setCategories).catch(() => setCategories([]))
-  }, [])
+    dispatch(loadCategories())
+  }, [dispatch])
 
   const precioNum = Number(precio) || 0
   const descuentoNum = discount ? Number(descuento) || 0 : 0
@@ -56,25 +57,24 @@ function SellerCreateProduct() {
     }
     setError('')
     setSaving(true)
-    try {
-      await createProduct({
-        nombre: nombreVal,
-        categoriaId,
-        descripcion: descripcion.trim(),
-        precio: precioNum,
-        stock: Number(stock),
-        descuentoPorcentaje: discount ? descuentoNum : '',
-        descuentoInicio: discount && descuentoInicio ? `${descuentoInicio}:00` : '',
-        descuentoFin: discount && descuentoFin ? `${descuentoFin}:00` : '',
-        image,
-      }, token)
-      notify('Producto creado correctamente')
-      navigate('/vendedor/inventario')
-    } catch (err) {
-      setError(err.message || 'No se pudo crear el producto')
-    } finally {
-      setSaving(false)
+    const action = await dispatch(createProductThunk({
+      nombre: nombreVal,
+      categoriaId,
+      descripcion: descripcion.trim(),
+      precio: precioNum,
+      stock: Number(stock),
+      descuentoPorcentaje: discount ? descuentoNum : '',
+      descuentoInicio: discount && descuentoInicio ? `${descuentoInicio}:00` : '',
+      descuentoFin: discount && descuentoFin ? `${descuentoFin}:00` : '',
+      image,
+    }))
+    setSaving(false)
+    if (action.error) {
+      setError(action.payload || 'No se pudo crear el producto')
+      return
     }
+    dispatch(notify('Producto creado correctamente'))
+    navigate('/vendedor/inventario')
   }
 
   return (

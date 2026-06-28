@@ -1,42 +1,32 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { clearStoredSession, getStoredToken, getStoredUser, saveStoredSession } from '../services/api'
+import { useDispatch, useSelector } from 'react-redux'
+import {
+  selectAuth,
+  setSession,
+  signInAsGuest as signInAsGuestAction,
+  signOut as signOutAction,
+  updateUser as updateUserAction,
+} from '../features/auth/authSlice'
 
-// Estado de sesión (demo, en memoria).
-// user = null            -> visitante normal (puede comprar)
-// user = { guest: true } -> invitado "sin cuenta" (navega pero NO puede comprar)
-// user = { role }        -> sesión iniciada (cliente / vendedor / admin)
-const AuthContext = createContext(null)
-
-export function AuthProvider({ children }) {
-  const [session, setSession] = useState(() => {
-    const token = getStoredToken()
-    const user = getStoredUser()
-    return token || user ? { token, user, guest: false } : null
-  })
-
-  useEffect(() => {
-    saveStoredSession(session)
-  }, [session])
-
-  const value = useMemo(() => ({
-    user: session?.user || null,
-    token: session?.token || '',
-    isGuest: session?.guest === true,
-    signIn: ({ token, user }) => setSession({ token: token || '', user: user || null, guest: false }),
-    signInAsGuest: () => setSession({ token: '', user: null, guest: true }),
-    updateUser: (user) => setSession((current) => (current ? { ...current, user, guest: false } : { token: '', user, guest: false })),
-    signOut: () => {
-      clearStoredSession()
-      setSession(null)
-    },
-  }), [session])
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+// Compatibilidad: este hook conserva la API del antiguo AuthContext, pero ahora lee y
+// escribe el estado global de Redux (useSelector/useDispatch). El estado de sesión vive
+// en el slice `auth`; la persistencia en localStorage la maneja el store (subscribe).
+export function useAuth() {
+  const dispatch = useDispatch()
+  const { user, token, isGuest } = useSelector(selectAuth)
+  return {
+    user: user || null,
+    token: token || '',
+    isGuest: isGuest === true,
+    signIn: ({ token, user }) => dispatch(setSession({ token: token || '', user: user || null })),
+    signInAsGuest: () => dispatch(signInAsGuestAction()),
+    updateUser: (user) => dispatch(updateUserAction(user)),
+    signOut: () => dispatch(signOutAction()),
+  }
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider')
-  return ctx
+// El antiguo AuthProvider ya no es necesario (el <Provider store> de Redux lo reemplaza),
+// pero lo dejamos como passthrough para no romper imports existentes.
+export function AuthProvider({ children }) {
+  return children
 }

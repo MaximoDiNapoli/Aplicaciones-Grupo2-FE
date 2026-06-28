@@ -1,48 +1,54 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { AdminLayout, PageTitle } from '../../components/dashboard/shells'
 import { TextInput } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
-import { useToast } from '../../store/toast'
-import { createCategory, deleteCategory, fetchCategories, fetchProducts, updateCategory } from '../../services/api'
+import { notify } from '../../features/ui/toastSlice'
+import {
+  selectCategories,
+  selectCategoriesError,
+  selectCategoriesLoading,
+} from '../../features/categories/categoriesSlice'
+import {
+  createCategoryThunk,
+  deleteCategoryThunk,
+  loadCategories,
+  updateCategoryThunk,
+} from '../../features/categories/categoriesThunks'
+import { selectProducts } from '../../features/products/productsSlice'
+import { loadProducts } from '../../features/products/productsThunks'
 
 // Gestión de Categorías (admin): alta/edición/baja contra el backend real.
+// El listado, loading y error provienen del store de Redux (slice `categories`);
+// el componente sólo conserva el estado de UI del formulario.
 function AdminCategories() {
-  const notify = useToast()
-  const [cats, setCats] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
+  const dispatch = useDispatch()
+  const categories = useSelector(selectCategories)
+  const loading = useSelector(selectCategoriesLoading)
+  const error = useSelector(selectCategoriesError)
+  const products = useSelector(selectProducts)
+
   // form = null (cerrado) | { id?, name, desc } (alta o edición)
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadCategories())
+    dispatch(loadProducts())
+  }, [dispatch])
 
-    Promise.all([fetchCategories(), fetchProducts().catch(() => [])])
-      .then(([categories, products]) => {
-        if (!alive) return
-        const counts = products.reduce((acc, product) => {
-          const key = product.categoryName || product.category || product.categoriaId
-          acc[key] = (acc[key] || 0) + 1
-          return acc
-        }, {})
-        setCats(categories.map((category) => ({ ...category, count: counts[category.name] || 0 })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar las categorías')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [reloadKey])
+  // Cuenta de productos por categoría, derivada del estado global de productos.
+  const cats = useMemo(() => {
+    const counts = products.reduce((acc, product) => {
+      const key = product.categoryName || product.category || product.categoriaId
+      acc[key] = (acc[key] || 0) + 1
+      return acc
+    }, {})
+    return categories.map((category) => ({ ...category, count: counts[category.name] || 0 }))
+  }, [categories, products])
 
   const openCreate = () => { setFormError(''); setForm({ name: '', desc: '' }) }
   const openEdit = (c) => { setFormError(''); setForm({ id: c.id, name: c.name, desc: c.desc || '' }) }
@@ -52,36 +58,30 @@ function AdminCategories() {
     const name = form.name.trim()
     if (!name) { setFormError('El nombre de la categoría es obligatorio.'); return }
     setSaving(true)
-    try {
-      const payload = { nombre: name, descripcion: form.desc.trim() }
-      if (form.id) {
-        await updateCategory(form.id, payload)
-        notify(`Categoría "${name}" actualizada`)
-      } else {
-        await createCategory(payload)
-        notify(`Categoría "${name}" creada`)
-      }
-      closeForm()
-      setReloadKey((k) => k + 1)
-    } catch (err) {
-      setFormError(err.message || 'No se pudo guardar la categoría')
-    } finally {
-      setSaving(false)
+    const payload = { nombre: name, descripcion: form.desc.trim() }
+    const action = form.id
+      ? await dispatch(updateCategoryThunk({ id: form.id, payload }))
+      : await dispatch(createCategoryThunk(payload))
+    setSaving(false)
+    if (action.error) {
+      setFormError(action.payload || 'No se pudo guardar la categoría')
+      return
     }
+    dispatch(notify(form.id ? `Categoría "${name}" actualizada` : `Categoría "${name}" creada`))
+    closeForm()
+    dispatch(loadCategories()) // refresca el listado normalizado tras la mutación
   }
 
   const removeCat = async (id, name) => {
-    try {
-      await deleteCategory(id)
-      setCats((list) => list.filter((c) => c.id !== id))
-      notify(`Categoría "${name}" eliminada`)
-    } catch (err) {
-      notify(err.message || 'No se pudo eliminar la categoría')
+    const action = await dispatch(deleteCategoryThunk(id))
+    if (action.error) {
+      dispatch(notify(action.payload || 'No se pudo eliminar la categoría'))
+      return
     }
+    dispatch(notify(`Categoría "${name}" eliminada`))
   }
 
-  const pagedCats = useMemo(() => cats, [cats])
-  const { page, setPage, total, totalPages, slice, from, to } = usePager(pagedCats, 5, String(cats.length))
+  const { page, setPage, total, totalPages, slice, from, to } = usePager(cats, 5, String(cats.length))
 
   return (
     <AdminLayout active="categorias">
@@ -125,7 +125,7 @@ function AdminCategories() {
             <span className="adm-muted">{c.desc}</span>
             <span className="ta-right"><span className="count-chip">{c.count}</span></span>
             <span className="adm-actions ta-right">
-              <button className="icon-action" aria-label="Ver" onClick={() => notify(`${c.count} productos en "${c.name}"`)}><Icon name="eye" size={18} strokeFill /></button>
+              <button className="icon-action" aria-label="Ver" onClick={() => dispatch(notify(`${c.count} productos en "${c.name}"`))}><Icon name="eye" size={18} strokeFill /></button>
               <button className="icon-action" aria-label="Editar" onClick={() => openEdit(c)}><Icon name="pencil" size={17} strokeFill /></button>
               <button className="icon-action" aria-label="Eliminar" onClick={() => removeCat(c.id, c.name)}><Icon name="trash" size={17} strokeFill /></button>
             </span>

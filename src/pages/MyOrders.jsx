@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import AccountLayout from '../components/layout/AccountLayout'
 import { StatusChip } from '../components/ui/Badge'
 import { formatPrice } from '../components/ui/Misc'
-import { fetchOrders } from '../services/api'
+import { selectOrders, selectOrdersError, selectOrdersLoading } from '../features/orders/ordersSlice'
+import { loadOrders } from '../features/orders/ordersThunks'
 
 const tabs = [
   { id: 'todos', label: 'Todos' },
@@ -12,37 +14,24 @@ const tabs = [
   { id: 'procesando', label: 'Procesando' },
 ]
 
-// Mis Compras: tabs de estado + tabla de órdenes.
+// Mis Compras: tabs de estado + tabla de órdenes (datos desde el slice `orders`).
 function MyOrders() {
+  const dispatch = useDispatch()
+  const rawOrders = useSelector(selectOrders)
+  const loading = useSelector(selectOrdersLoading)
+  const error = useSelector(selectOrdersError)
   const [tab, setTab] = useState('todos')
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadOrders())
+  }, [dispatch])
 
-    fetchOrders()
-      .then((nextOrders) => {
-        if (!alive) return
-        setOrders(nextOrders.map((order) => ({
-          id: order.id,
-          date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
-          total: Number(order.total || 0),
-          status: String(order.estado?.nombre || 'procesando').toLowerCase(),
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar las compras')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [])
+  const orders = useMemo(() => rawOrders.map((order) => ({
+    id: order.id,
+    date: order.fechaCompra ? new Date(order.fechaCompra).toLocaleDateString('es-AR') : 'Sin fecha',
+    total: Number(order.total || 0),
+    status: String(order.estado?.nombre || 'procesando').toLowerCase(),
+  })), [rawOrders])
 
   const rows = useMemo(
     () => (tab === 'todos' ? orders : orders.filter((o) => o.status === tab)),

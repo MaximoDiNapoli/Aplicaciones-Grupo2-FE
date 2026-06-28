@@ -1,78 +1,70 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import { Select } from '../../components/ui/Field'
 import ProductImage from '../../components/product/ProductImage'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
-import { useToast } from '../../store/toast'
-import { fetchOrderById, fetchOrderItems, fetchProducts, fetchEstados, updateOrderStatus } from '../../services/api'
+import { notify } from '../../features/ui/toastSlice'
+import {
+  selectCurrentOrder,
+  selectOrderItems,
+  selectOrdersError,
+} from '../../features/orders/ordersSlice'
+import { loadOrderById, loadOrderItems, updateOrderStatusThunk } from '../../features/orders/ordersThunks'
+import { selectProducts } from '../../features/products/productsSlice'
+import { loadProducts } from '../../features/products/productsThunks'
+import { fetchEstados } from '../../services/api'
 
-// Detalle de Orden (vendedor): datos reales + cambio de estado contra el backend.
+// Detalle de Orden (vendedor): datos reales + cambio de estado (slices orders+products).
+// `estados` se carga por API directa (no tiene slice propio en esta entrega).
 function SellerOrderDetail() {
   const { id } = useParams()
-  const notify = useToast()
-  const [order, setOrder] = useState(null)
-  const [items, setItems] = useState([])
-  const [products, setProducts] = useState([])
+  const dispatch = useDispatch()
+  const current = useSelector(selectCurrentOrder)
+  const items = useSelector(selectOrderItems)
+  const products = useSelector(selectProducts)
+  const error = useSelector(selectOrdersError)
   const [estados, setEstados] = useState([])
   const [estadoId, setEstadoId] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [reloadKey, setReloadKey] = useState(0)
+  const [estadoSyncId, setEstadoSyncId] = useState(null)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadOrderById(id))
+    dispatch(loadOrderItems(id))
+    dispatch(loadProducts())
+    fetchEstados().then(setEstados).catch(() => setEstados([]))
+  }, [dispatch, id])
 
-    Promise.all([
-      fetchOrderById(id),
-      fetchOrderItems(id).catch(() => []),
-      fetchProducts().catch(() => []),
-      fetchEstados().catch(() => []),
-    ])
-      .then(([nextOrder, nextItems, nextProducts, nextEstados]) => {
-        if (!alive) return
-        setOrder(nextOrder)
-        setItems(nextItems)
-        setProducts(nextProducts)
-        setEstados(nextEstados)
-        setEstadoId(nextOrder.idEstado ? String(nextOrder.idEstado) : '')
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudo cargar la orden')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
+  // Guarda de id: el detalle del store debe corresponder a la ruta actual.
+  const order = current && String(current.id) === String(id) ? current : null
 
-    return () => { alive = false }
-  }, [id, reloadKey])
+  // Sincroniza el estado seleccionado cuando llega/cambia la orden (ajuste durante el render).
+  if (order && order.id !== estadoSyncId) {
+    setEstadoSyncId(order.id)
+    setEstadoId(order.idEstado ? String(order.idEstado) : '')
+  }
 
   const productById = useMemo(() => Object.fromEntries(products.map((p) => [p.id, p])), [products])
 
   const changeStatus = async () => {
     if (!estadoId || Number(estadoId) === order.idEstado) return
     setSaving(true)
-    try {
-      await updateOrderStatus(id, Number(estadoId))
-      notify('Estado de la orden actualizado')
-      setReloadKey((k) => k + 1)
-    } catch (err) {
-      notify(err.message || 'No se pudo actualizar el estado')
-    } finally {
-      setSaving(false)
+    const action = await dispatch(updateOrderStatusThunk({ id, idEstado: Number(estadoId) }))
+    setSaving(false)
+    if (action.error) {
+      dispatch(notify(action.payload || 'No se pudo actualizar el estado'))
+      return
     }
+    dispatch(notify('Estado de la orden actualizado'))
+    dispatch(loadOrderById(id)) // refresca el detalle con el nuevo estado
   }
 
-  if (loading) {
-    return <SellerLayout active="ventas"><p className="adm-table__empty">Cargando orden...</p></SellerLayout>
-  }
-  if (error || !order) {
-    return <SellerLayout active="ventas"><p className="adm-table__empty">{error || 'Orden no encontrada.'}</p></SellerLayout>
+  if (!order) {
+    return <SellerLayout active="ventas"><p className="adm-table__empty">{error ? error : 'Cargando orden...'}</p></SellerLayout>
   }
 
   const status = String(order.estado?.nombre || 'pendiente').toLowerCase()

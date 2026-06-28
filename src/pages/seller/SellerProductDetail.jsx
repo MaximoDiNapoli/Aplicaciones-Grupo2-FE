@@ -1,49 +1,50 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
-import { useToast } from '../../store/toast'
-import { fetchProductById, deleteProduct } from '../../services/api'
+import { notify } from '../../features/ui/toastSlice'
+import { selectCurrentProduct, selectProductsError } from '../../features/products/productsSlice'
+import { deleteProductThunk, loadProductById } from '../../features/products/productsThunks'
 
-// Detalle de Producto (vendedor): datos reales del backend + baja lógica.
+// Detalle de Producto (vendedor): datos reales del backend + baja lógica (slice `products`).
 function SellerProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const notify = useToast()
-  const [product, setProduct] = useState(null)
+  const dispatch = useDispatch()
+  const current = useSelector(selectCurrentProduct)
+  const error = useSelector(selectProductsError)
   const [active, setActive] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [prevId, setPrevId] = useState(id)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadProductById(id))
+  }, [dispatch, id])
 
-    fetchProductById(id)
-      .then((next) => { if (alive) { setProduct(next); setError('') } })
-      .catch((err) => { if (alive) setError(err.message || 'No se pudo cargar el producto') })
-      .finally(() => { if (alive) setLoading(false) })
+  // Reinicia la galería al cambiar de producto (ajuste durante el render).
+  if (id !== prevId) {
+    setPrevId(id)
+    setActive(0)
+  }
 
-    return () => { alive = false }
-  }, [id])
+  // Guarda de id: ignoramos el producto del store hasta que coincida con la ruta.
+  const product = current && String(current.id) === String(id) ? current : null
 
   const remove = async () => {
-    try {
-      await deleteProduct(id)
-      notify('Producto eliminado')
-      navigate('/vendedor/inventario')
-    } catch (err) {
-      notify(err.message || 'No se pudo eliminar el producto')
+    const action = await dispatch(deleteProductThunk(id))
+    if (action.error) {
+      dispatch(notify(action.payload || 'No se pudo eliminar el producto'))
+      return
     }
+    dispatch(notify('Producto eliminado'))
+    navigate('/vendedor/inventario')
   }
 
-  if (loading) {
-    return <SellerLayout active="inventario"><p className="adm-table__empty">Cargando producto...</p></SellerLayout>
-  }
-  if (error || !product) {
-    return <SellerLayout active="inventario"><p className="adm-table__empty">{error || 'Producto no encontrado.'}</p></SellerLayout>
+  if (!product) {
+    return <SellerLayout active="inventario"><p className="adm-table__empty">{error ? error : 'Cargando producto...'}</p></SellerLayout>
   }
 
   const status = product.stock > 0 ? 'disponible' : 'agotado'

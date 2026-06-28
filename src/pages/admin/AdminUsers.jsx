@@ -1,58 +1,57 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { AdminLayout, PageTitle, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import { TextInput, Select } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
-import { useToast } from '../../store/toast'
+import { notify } from '../../features/ui/toastSlice'
 import { adminPaymentProviders } from '../../data/mock'
-import { createUser, deleteUser, fetchUsers, updateUser } from '../../services/api'
+import {
+  selectUsers,
+  selectUsersError,
+  selectUsersLoading,
+} from '../../features/users/usersSlice'
+import {
+  createUserThunk,
+  deleteUserThunk,
+  loadUsers,
+  updateUserThunk,
+} from '../../features/users/usersThunks'
 
 const ROLES = ['COMPRADOR', 'VENDEDOR', 'ADMINISTRADOR']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Gestión de Usuarios + panel de Métodos de Pago (pasarelas, demo sin backend).
+// El listado/loading/error provienen del store de Redux (slice `users`).
 function AdminUsers() {
-  const notify = useToast()
+  const dispatch = useDispatch()
+  const rawUsers = useSelector(selectUsers)
+  const loading = useSelector(selectUsersLoading)
+  const error = useSelector(selectUsersError)
+
   const [q, setQ] = useState('')
   const [role, setRole] = useState('Todos los Roles')
-  const [users, setUsers] = useState([])
   const [providers, setProviders] = useState(adminPaymentProviders)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
   // form = null | { id?, nombre, email, telefono, rol, password }
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadUsers())
+  }, [dispatch])
 
-    fetchUsers()
-      .then((nextUsers) => {
-        if (!alive) return
-        setUsers(nextUsers.map((user) => ({
-          id: user.id,
-          name: user.nombre,
-          email: user.email,
-          telefono: user.telefono || '',
-          role: user.rol || 'COMPRADOR',
-          activity: user.createdAt ? `Registrado ${new Date(user.createdAt).toLocaleDateString('es-AR')}` : 'Sin actividad',
-          status: 'Activo',
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar los usuarios')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [reloadKey])
+  // Adapta los usuarios del backend al formato de la tabla.
+  const users = useMemo(() => rawUsers.map((user) => ({
+    id: user.id,
+    name: user.nombre,
+    email: user.email,
+    telefono: user.telefono || '',
+    role: user.rol || 'COMPRADOR',
+    activity: user.createdAt ? `Registrado ${new Date(user.createdAt).toLocaleDateString('es-AR')}` : 'Sin actividad',
+    status: 'Activo',
+  })), [rawUsers])
 
   const openCreate = () => { setFormError(''); setForm({ nombre: '', email: '', telefono: '', rol: 'COMPRADOR', password: '' }) }
   const openEdit = (u) => { setFormError(''); setForm({ id: u.id, nombre: u.name, email: u.email, telefono: u.telefono, rol: u.role, password: '' }) }
@@ -66,32 +65,27 @@ function AdminUsers() {
     if (!EMAIL_RE.test(email)) { setFormError('Ingresá un email válido.'); return }
     if (!form.id && form.password.length < 6) { setFormError('La contraseña debe tener al menos 6 caracteres.'); return }
     setSaving(true)
-    try {
-      const payload = { nombre, email, telefono: form.telefono.trim(), rol: form.rol }
-      if (form.id) {
-        await updateUser(form.id, payload)
-        notify(`Usuario "${nombre}" actualizado`)
-      } else {
-        await createUser({ ...payload, password: form.password })
-        notify(`Usuario "${nombre}" creado`)
-      }
-      closeForm()
-      setReloadKey((k) => k + 1)
-    } catch (err) {
-      setFormError(err.message || 'No se pudo guardar el usuario')
-    } finally {
-      setSaving(false)
+    const payload = { nombre, email, telefono: form.telefono.trim(), rol: form.rol }
+    const action = form.id
+      ? await dispatch(updateUserThunk({ id: form.id, payload }))
+      : await dispatch(createUserThunk({ ...payload, password: form.password }))
+    setSaving(false)
+    if (action.error) {
+      setFormError(action.payload || 'No se pudo guardar el usuario')
+      return
     }
+    dispatch(notify(form.id ? `Usuario "${nombre}" actualizado` : `Usuario "${nombre}" creado`))
+    closeForm()
+    dispatch(loadUsers()) // refresca el listado tras la mutación
   }
 
   const removeUser = async (id, name) => {
-    try {
-      await deleteUser(id)
-      setUsers((list) => list.filter((u) => u.id !== id))
-      notify(`Usuario ${name} eliminado`)
-    } catch (err) {
-      notify(err.message || 'No se pudo eliminar el usuario')
+    const action = await dispatch(deleteUserThunk(id))
+    if (action.error) {
+      dispatch(notify(action.payload || 'No se pudo eliminar el usuario'))
+      return
     }
+    dispatch(notify(`Usuario ${name} eliminado`))
   }
   const toggleProvider = (id) =>
     setProviders((list) => list.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))

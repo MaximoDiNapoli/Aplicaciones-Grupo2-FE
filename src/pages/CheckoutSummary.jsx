@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import CheckoutLayout from '../components/layout/CheckoutLayout'
 import ProductImage from '../components/product/ProductImage'
 import { Checkbox } from '../components/ui/Field'
@@ -8,16 +9,17 @@ import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
-import { createPurchase } from '../services/api'
+import { createPurchaseThunk } from '../features/orders/ordersThunks'
 
-// Checkout paso 3: revisión final + creación real de la compra en el backend.
+// Checkout paso 3: revisión final + creación real de la compra en el backend (thunk).
 function CheckoutSummary() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [accept, setAccept] = useState(false) // términos desmarcados por defecto
   const [placing, setPlacing] = useState(false)
   const [orderError, setOrderError] = useState('')
   const { items, subtotal, cartId, clearLocal } = useCart()
-  const { shipping: shipAddr, payment, setLastOrder, reset } = useCheckout()
+  const { shipping: shipAddr, payment, setLastOrder } = useCheckout()
   const summary = buildCheckoutSummary(items, subtotal)
   const { count, shipping, discount, total } = summary
 
@@ -34,19 +36,19 @@ function CheckoutSummary() {
     if (!canFinish) return
     setPlacing(true)
     setOrderError('')
-    try {
-      const compra = await createPurchase(cartId, {
-        idMetodoPago: payment.idMetodoPago,
-        idDireccionEnvio: shipAddr.id,
-      })
-      setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
-      clearLocal() // el backend ya vació el carrito al crear la compra
-      navigate(`/compras/${compra.id}`, { replace: true })
-    } catch (err) {
-      setOrderError(err.message || 'No se pudo completar la compra')
-    } finally {
-      setPlacing(false)
+    const action = await dispatch(createPurchaseThunk({
+      cartId,
+      payload: { idMetodoPago: payment.idMetodoPago, idDireccionEnvio: shipAddr.id },
+    }))
+    setPlacing(false)
+    if (action.error) {
+      setOrderError(action.payload || 'No se pudo completar la compra')
+      return
     }
+    const compra = action.payload
+    setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
+    clearLocal() // el backend ya vació el carrito al crear la compra
+    navigate(`/compras/${compra.id}`, { replace: true })
   }
 
   return (

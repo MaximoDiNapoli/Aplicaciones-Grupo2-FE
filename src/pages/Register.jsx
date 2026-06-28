@@ -1,10 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { useDispatch } from 'react-redux'
 import AuthLayout from '../components/layout/AuthLayout'
 import { TextInput, PasswordInput } from '../components/ui/Field'
 import Button from '../components/ui/Button'
-import { register, resolveSessionFromToken } from '../services/api'
-import { useAuth } from '../store/auth'
+import { registerUser } from '../features/auth/authThunks'
 
 function landingPath(rol = '') {
   const normalized = String(rol).trim().toUpperCase()
@@ -16,7 +16,7 @@ function landingPath(rol = '') {
 // Registro de cuenta.
 function Register() {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const dispatch = useDispatch()
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -46,16 +46,14 @@ function Register() {
       return
     }
     setLoading(true)
-    try {
-      const auth = await register({ nombre: nombreVal, email: emailVal, telefono: telefono.trim(), password, rol: 'COMPRADOR' })
-      const session = await resolveSessionFromToken(auth.accessToken)
-      signIn(session || { token: auth.accessToken, user: null })
-      navigate(landingPath(session?.user?.rol))
-    } catch (err) {
-      setError(err.message || 'No fue posible crear la cuenta')
-    } finally {
-      setLoading(false)
+    // El thunk registerUser crea la cuenta, resuelve la sesión y actualiza el slice `auth`.
+    const action = await dispatch(registerUser({ nombre: nombreVal, email: emailVal, telefono: telefono.trim(), password, rol: 'COMPRADOR' }))
+    setLoading(false)
+    if (action.error) {
+      setError(action.payload || 'No fue posible crear la cuenta')
+      return
     }
+    navigate(landingPath(action.payload?.user?.rol))
   }
   return (
     <AuthLayout hero={{ image: 'linear-gradient(135deg, #ff9ec0, #ff619b)' }}>
