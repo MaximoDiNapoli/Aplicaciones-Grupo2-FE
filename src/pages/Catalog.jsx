@@ -7,9 +7,8 @@ import ProductGrid from '../components/product/ProductGrid'
 import { Checkbox, Select } from '../components/ui/Field'
 import Pagination, { usePager } from '../components/ui/Pagination'
 import { selectProducts, selectProductsError, selectProductsLoading } from '../features/products/productsSlice'
-import { loadProducts } from '../features/products/productsThunks'
+import { loadCatalog } from '../features/products/productsThunks'
 import { selectCategories, selectCategoriesError, selectCategoriesLoading } from '../features/categories/categoriesSlice'
-import { loadCategories } from '../features/categories/categoriesThunks'
 
 // Catálogo: filtros por categoría, rango de precio y orden + grilla + paginación.
 // Productos y categorías provienen de sus respectivos slices de Redux.
@@ -28,9 +27,9 @@ function Catalog() {
   const [max, setMax] = useState('')
   const [sort, setSort] = useState('Relevancia')
 
+  // loadCatalog evita el doble GET /api/categorias (categorías una vez, luego productos).
   useEffect(() => {
-    dispatch(loadCategories())
-    dispatch(loadProducts())
+    dispatch(loadCatalog())
   }, [dispatch])
 
   const toggleCat = (id) =>

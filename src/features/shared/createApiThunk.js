@@ -7,12 +7,13 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 //   export const fetchProducts = createApiThunk('products/fetchAll', api.fetchProducts)
 //
 // `apiFn` recibe el argumento despachado (objeto), y `thunkApi` por si se necesita getState.
-export function createApiThunk(type, apiFn) {
+// `options` se pasa a createAsyncThunk (ej. `condition` para evitar despachos duplicados).
+export function createApiThunk(type, apiFn, options) {
   return createAsyncThunk(type, async (arg, thunkApi) => {
     try {
       return await apiFn(arg, thunkApi)
     } catch (err) {
       return thunkApi.rejectWithValue(err.message || 'Error de red')
     }
-  })
+  }, options)
 }

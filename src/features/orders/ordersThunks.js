@@ -8,7 +8,10 @@ import {
 } from '../../services/api'
 
 // Thunks de compras/órdenes (GET / POST / PUT) vía Axios.
-export const loadOrders = createApiThunk('orders/fetchAll', () => fetchOrders())
+export const loadOrders = createApiThunk('orders/fetchAll', () => fetchOrders(), {
+  // Evita despachos duplicados concurrentes (StrictMode / re-render del efecto).
+  condition: (_, { getState }) => !getState().orders.loading,
+})
 export const loadOrderById = createApiThunk('orders/fetchOne', (id) => fetchOrderById(id))
 export const loadOrderItems = createApiThunk('orders/fetchItems', (id) => fetchOrderItems(id))
 export const updateOrderStatusThunk = createApiThunk('orders/updateStatus', async ({ id, idEstado }) => {

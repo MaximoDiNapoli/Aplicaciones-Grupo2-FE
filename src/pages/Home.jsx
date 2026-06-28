@@ -6,9 +6,8 @@ import ProductGrid from '../components/product/ProductGrid'
 import SectionHeader from '../components/common/SectionHeader'
 import Button from '../components/ui/Button'
 import { selectProducts, selectProductsError, selectProductsLoading } from '../features/products/productsSlice'
-import { loadProducts } from '../features/products/productsThunks'
+import { loadCatalog } from '../features/products/productsThunks'
 import { selectCategories, selectCategoriesLoading } from '../features/categories/categoriesSlice'
-import { loadCategories } from '../features/categories/categoriesThunks'
 
 // Inicio - hero + habitats (categorías) + descubrimientos destacados (slices Redux).
 function Home() {
@@ -20,9 +19,9 @@ function Home() {
   const loading = productsLoading || categoriesLoading
   const error = useSelector(selectProductsError)
 
+  // loadCatalog pide /api/categorias una sola vez y luego /api/productos (reutiliza categorías).
   useEffect(() => {
-    dispatch(loadCategories())
-    dispatch(loadProducts())
+    dispatch(loadCatalog())
   }, [dispatch])
 
   const featured = products.slice(0, 3)

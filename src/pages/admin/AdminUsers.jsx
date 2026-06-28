@@ -76,7 +76,7 @@ function AdminUsers() {
     }
     dispatch(notify(form.id ? `Usuario "${nombre}" actualizado` : `Usuario "${nombre}" creado`))
     closeForm()
-    dispatch(loadUsers()) // refresca el listado tras la mutación
+    // Sin recarga: el slice `users` ya aplica el usuario devuelto por el thunk (create/update).
   }
 
   const removeUser = async (id, name) => {

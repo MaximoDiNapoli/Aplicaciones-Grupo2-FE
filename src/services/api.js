@@ -141,6 +141,16 @@ export async function fetchProductById(id) {
   return normalizeProduct(product, categoriesById)
 }
 
+// Variantes "solo productos" (sin pedir /api/categorias): los thunks reutilizan las
+// categorías ya presentes en el store y normalizan con ellas, evitando GET redundantes.
+export async function fetchProductsOnly(params = {}) {
+  return request('/api/productos', { params })
+}
+
+export async function fetchProductOnly(id) {
+  return request(`/api/productos/${id}`)
+}
+
 export async function fetchUsers(params = {}) {
   return request('/api/users', { params })
 }

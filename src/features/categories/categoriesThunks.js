@@ -10,7 +10,10 @@ import {
 // Thunks CRUD de categorías (GET / POST / PUT / DELETE) vía Axios.
 // create/update normalizan la respuesta cruda del backend (nombre/descripcion) al
 // formato del slice (name/desc) para mantener el estado consistente sin recargar.
-export const loadCategories = createApiThunk('categories/fetchAll', () => fetchCategories())
+export const loadCategories = createApiThunk('categories/fetchAll', () => fetchCategories(), {
+  // Evita despachos duplicados concurrentes (StrictMode / cargas en paralelo).
+  condition: (_, { getState }) => !getState().categories.loading,
+})
 export const createCategoryThunk = createApiThunk('categories/create', async (payload) =>
   normalizeCategory(await createCategory(payload)))
 export const updateCategoryThunk = createApiThunk('categories/update', async ({ id, payload }) =>

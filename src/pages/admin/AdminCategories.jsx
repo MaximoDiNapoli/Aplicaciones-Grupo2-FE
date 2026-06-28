@@ -14,11 +14,10 @@ import {
 import {
   createCategoryThunk,
   deleteCategoryThunk,
-  loadCategories,
   updateCategoryThunk,
 } from '../../features/categories/categoriesThunks'
 import { selectProducts } from '../../features/products/productsSlice'
-import { loadProducts } from '../../features/products/productsThunks'
+import { loadCatalog } from '../../features/products/productsThunks'
 
 // Gestión de Categorías (admin): alta/edición/baja contra el backend real.
 // El listado, loading y error provienen del store de Redux (slice `categories`);
@@ -35,9 +34,9 @@ function AdminCategories() {
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Categorías (para el CRUD) + productos (para los conteos) en una sola carga de categorías.
   useEffect(() => {
-    dispatch(loadCategories())
-    dispatch(loadProducts())
+    dispatch(loadCatalog())
   }, [dispatch])
 
   // Cuenta de productos por categoría, derivada del estado global de productos.
@@ -69,7 +68,7 @@ function AdminCategories() {
     }
     dispatch(notify(form.id ? `Categoría "${name}" actualizada` : `Categoría "${name}" creada`))
     closeForm()
-    dispatch(loadCategories()) // refresca el listado normalizado tras la mutación
+    // Sin recarga: el slice `categories` ya aplica la categoría normalizada devuelta por el thunk.
   }
 
   const removeCat = async (id, name) => {

@@ -15,8 +15,7 @@ import {
   selectProducts,
   selectProductsError,
 } from '../features/products/productsSlice'
-import { loadProductById, loadProducts } from '../features/products/productsThunks'
-import { reviews } from '../data/mock'
+import { loadProductPage } from '../features/products/productsThunks'
 
 // Detalle de producto: galería + ficha + reseñas + relacionados (slice `products`).
 function ProductDetail() {
@@ -32,9 +31,9 @@ function ProductDetail() {
   const [added, setAdded] = useState(false)
   const [prevId, setPrevId] = useState(id)
 
+  // Una sola carga de categorías + producto + listado (relacionados) sin GET redundantes.
   useEffect(() => {
-    dispatch(loadProductById(id))
-    dispatch(loadProducts())
+    dispatch(loadProductPage(id))
   }, [dispatch, id])
 
   // Reinicia la vista de galería al cambiar de producto (ajuste durante el render).
@@ -129,16 +128,15 @@ function ProductDetail() {
 
       <section className="home-section">
         <h2 className="reviews-title">Lo que dicen nuestros exploradores</h2>
-        <div className="reviews-grid">
-          {reviews.map((r) => (
-            <article className="review-card" key={r.id}>
-              <RatingStars value={r.rating} size={14} />
-              <h4 className="review-card__title">{r.title}</h4>
-              <p className="review-card__body">«{r.body}»</p>
-              <span className="review-card__author">— {r.author}</span>
-            </article>
-          ))}
-        </div>
+        {/* El backend (entidad Producto) no expone reseñas: se muestra el estado real,
+            sin testimonios inventados. product.reviews proviene del backend (0 por defecto). */}
+        {product.reviews > 0 ? (
+          <p className="reviews-summary">
+            <RatingStars value={product.rating} size={16} /> {product.rating} de 5 · {product.reviews} reseñas
+          </p>
+        ) : (
+          <p className="catalog__empty">Este producto todavía no tiene reseñas. ¡Sé el primero en opinar!</p>
+        )}
       </section>
 
       <section className="home-section">

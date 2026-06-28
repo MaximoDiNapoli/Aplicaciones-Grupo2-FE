@@ -16,7 +16,13 @@ const initialState = {
 const categoriesSlice = createSlice({
   name: 'categories',
   initialState,
-  reducers: {},
+  reducers: {
+    // Permite que los thunks de productos pueblen las categorías una sola vez
+    // (cuando las obtienen junto con el catálogo) y así evitar un GET /api/categorias extra.
+    categoriesSet(state, { payload }) {
+      state.items = payload
+    },
+  },
   extraReducers: (builder) => {
     handleAsync(builder, loadCategories, (state, { payload }) => { state.items = payload })
     handleAsync(builder, createCategoryThunk, (state, { payload }) => {
@@ -30,6 +36,8 @@ const categoriesSlice = createSlice({
     })
   },
 })
+
+export const { categoriesSet } = categoriesSlice.actions
 
 export const selectCategories = (state) => state.categories.items
 export const selectCategoriesLoading = (state) => state.categories.loading
