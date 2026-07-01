@@ -60,6 +60,7 @@ function SellerProductDetail() {
           <h1 className="dash-pagetitle__title">{product.name} <Pill tone={pillTone(status)}>{cap(status)}</Pill></h1>
         </div>
         <div className="dash-pagetitle__actions">
+          <Button variant="outline" to={`/vendedor/inventario/${product.id}/editar`} iconLeft="pencil">Editar</Button>
           <Button variant="outline" iconLeft="trash" onClick={remove}>Eliminar</Button>
         </div>
       </div>

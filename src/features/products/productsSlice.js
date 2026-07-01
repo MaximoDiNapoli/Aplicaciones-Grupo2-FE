@@ -6,6 +6,7 @@ import {
   loadProductById,
   loadProducts,
   loadSellerProducts,
+  updateProductThunk,
 } from './productsThunks'
 
 const initialState = {
@@ -29,10 +30,20 @@ const productsSlice = createSlice({
     handleAsync(builder, loadSellerProducts, setList)
     handleAsync(builder, loadProductById, (state, { payload }) => { state.current = payload })
     handleAsync(builder, createProductThunk, (state, { payload }) => {
-      if (payload?.id) state.items.unshift(payload)
+      if (payload?.id) {
+        state.items.unshift(payload)
+        state.current = payload
+      }
+    })
+    handleAsync(builder, updateProductThunk, (state, { payload }) => {
+      if (payload?.id) {
+        state.items = state.items.map((p) => (p.id === payload.id ? payload : p))
+        if (state.current?.id === payload.id) state.current = payload
+      }
     })
     handleAsync(builder, deleteProductThunk, (state, { payload: id }) => {
       state.items = state.items.filter((p) => p.id !== id)
+      if (state.current?.id === id) state.current = null
     })
   },
 })

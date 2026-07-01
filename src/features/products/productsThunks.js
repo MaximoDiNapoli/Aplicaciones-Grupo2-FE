@@ -7,6 +7,7 @@ import {
   fetchCategories,
   fetchSellerProducts,
   normalizeProduct,
+  updateProduct,
 } from '../../services/api'
 import { categoriesSet, selectCategories } from '../categories/categoriesSlice'
 import { loadCategories } from '../categories/categoriesThunks'
@@ -42,7 +43,14 @@ export const loadProductById = createApiThunk('products/fetchOne', async (id, th
   return normalizeProduct(raw, categoriesById)
 })
 
-export const createProductThunk = createApiThunk('products/create', (payload) => createProduct(payload))
+export const createProductThunk = createApiThunk('products/create', async (payload, thunkApi) => {
+  const categoriesById = await ensureCategoriesById(thunkApi)
+  return normalizeProduct(await createProduct(payload), categoriesById)
+})
+export const updateProductThunk = createApiThunk('products/update', async ({ id, payload }, thunkApi) => {
+  const categoriesById = await ensureCategoriesById(thunkApi)
+  return normalizeProduct(await updateProduct(id, payload), categoriesById)
+})
 export const deleteProductThunk = createApiThunk('products/delete', async (id) => {
   await deleteProduct(id)
   return id

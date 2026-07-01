@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout } from '../../components/dashboard/shells'
 import { TextInput, Select } from '../../components/ui/Field'
@@ -7,31 +7,44 @@ import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
 import { notify } from '../../features/ui/toastSlice'
-import { selectCategories } from '../../features/categories/categoriesSlice'
+import { selectCategories, selectCategoriesLoading } from '../../features/categories/categoriesSlice'
 import { loadCategories } from '../../features/categories/categoriesThunks'
-import { createProductThunk } from '../../features/products/productsThunks'
+import { selectCurrentProduct } from '../../features/products/productsSlice'
+import { createProductThunk, loadProductById, updateProductThunk } from '../../features/products/productsThunks'
 
-// Crear Producto: formulario controlado con validación + alta real (thunk createProduct).
-function SellerCreateProduct() {
+function buildInitialForm(product) {
+  const hasDiscount = Boolean(product?.oldPrice && product.oldPrice > product.price)
+  return {
+    nombre: product?.name || '',
+    categoriaId: product?.categoryId ?? '',
+    descripcion: product?.description || '',
+    precio: product ? String(hasDiscount ? product.oldPrice : product.price ?? '') : '',
+    stock: product ? String(product.stock ?? '') : '',
+    discount: hasDiscount,
+    descuento: hasDiscount && product?.oldPrice ? String(Math.round((1 - product.price / product.oldPrice) * 100)) : '',
+    descuentoInicio: '',
+    descuentoFin: '',
+    image: null,
+  }
+}
+
+function ProductForm({ initialProduct, isEditMode }) {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const categories = useSelector(selectCategories)
-  const [nombre, setNombre] = useState('')
-  const [categoriaId, setCategoriaId] = useState('')
-  const [descripcion, setDescripcion] = useState('')
-  const [precio, setPrecio] = useState('')
-  const [stock, setStock] = useState('')
-  const [discount, setDiscount] = useState(false)
-  const [descuento, setDescuento] = useState('')
-  const [descuentoInicio, setDescuentoInicio] = useState('')
-  const [descuentoFin, setDescuentoFin] = useState('')
-  const [image, setImage] = useState(null)
+  const categoryOptions = [{ value: '', label: 'Selecciona una categoría...' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]
+  const [nombre, setNombre] = useState(() => buildInitialForm(initialProduct).nombre)
+  const [categoriaId, setCategoriaId] = useState(() => buildInitialForm(initialProduct).categoriaId)
+  const [descripcion, setDescripcion] = useState(() => buildInitialForm(initialProduct).descripcion)
+  const [precio, setPrecio] = useState(() => buildInitialForm(initialProduct).precio)
+  const [stock, setStock] = useState(() => buildInitialForm(initialProduct).stock)
+  const [discount, setDiscount] = useState(() => buildInitialForm(initialProduct).discount)
+  const [descuento, setDescuento] = useState(() => buildInitialForm(initialProduct).descuento)
+  const [descuentoInicio, setDescuentoInicio] = useState(() => buildInitialForm(initialProduct).descuentoInicio)
+  const [descuentoFin, setDescuentoFin] = useState(() => buildInitialForm(initialProduct).descuentoFin)
+  const [image, setImage] = useState(() => buildInitialForm(initialProduct).image)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    dispatch(loadCategories())
-  }, [dispatch])
 
   const precioNum = Number(precio) || 0
   const descuentoNum = discount ? Number(descuento) || 0 : 0
@@ -57,7 +70,7 @@ function SellerCreateProduct() {
     }
     setError('')
     setSaving(true)
-    const action = await dispatch(createProductThunk({
+    const productPayload = {
       nombre: nombreVal,
       categoriaId,
       descripcion: descripcion.trim(),
@@ -67,26 +80,29 @@ function SellerCreateProduct() {
       descuentoInicio: discount && descuentoInicio ? `${descuentoInicio}:00` : '',
       descuentoFin: discount && descuentoFin ? `${descuentoFin}:00` : '',
       image,
-    }))
+    }
+    const action = await dispatch(isEditMode
+      ? updateProductThunk({ id: initialProduct.id, payload: productPayload })
+      : createProductThunk(productPayload))
     setSaving(false)
     if (action.error) {
-      setError(action.payload || 'No se pudo crear el producto')
+      setError(action.payload || (isEditMode ? 'No se pudo actualizar el producto' : 'No se pudo crear el producto'))
       return
     }
-    dispatch(notify('Producto creado correctamente'))
-    navigate('/vendedor/inventario')
+    dispatch(notify(isEditMode ? 'Producto actualizado correctamente' : 'Producto creado correctamente'))
+    navigate(isEditMode ? `/vendedor/inventario/${action.payload.id}` : '/vendedor/inventario')
   }
 
   return (
     <SellerLayout active="inventario">
       <div className="dash-pagetitle dash-pagetitle--form">
         <div>
-          <nav className="crumbs"><Link to="/vendedor/inventario">Inventario</Link> <Icon name="arrowRight" size={13} strokeFill /> <span>Crear Producto</span></nav>
-          <h1 className="dash-pagetitle__title">Agregar Nuevo Producto</h1>
+          <nav className="crumbs"><Link to="/vendedor/inventario">Inventario</Link> <Icon name="arrowRight" size={13} strokeFill /> <span>{isEditMode ? 'Editar Producto' : 'Crear Producto'}</span></nav>
+          <h1 className="dash-pagetitle__title">{isEditMode ? 'Editar Producto' : 'Agregar Nuevo Producto'}</h1>
         </div>
         <div className="dash-pagetitle__actions">
           <Button variant="outline" to="/vendedor/inventario">Cancelar</Button>
-          <Button iconLeft="check" onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar Producto'}</Button>
+          <Button iconLeft="check" onClick={save} disabled={saving}>{saving ? 'Guardando...' : isEditMode ? 'Guardar Cambios' : 'Guardar Producto'}</Button>
         </div>
       </div>
 
@@ -106,7 +122,7 @@ function SellerCreateProduct() {
               label="Categoría"
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
-              options={[{ value: '', label: 'Selecciona una categoría...' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+              options={categoryOptions}
             />
             <label className="field">
               <span className="field__label">Descripción</span>
@@ -159,6 +175,33 @@ function SellerCreateProduct() {
       </div>
     </SellerLayout>
   )
+}
+
+function SellerCreateProduct() {
+  const { id } = useParams()
+  const dispatch = useDispatch()
+  const categoriesLoading = useSelector(selectCategoriesLoading)
+  const current = useSelector(selectCurrentProduct)
+  const isEditMode = Boolean(id)
+  const readyForEdit = !isEditMode || (current && String(current.id) === String(id) && !categoriesLoading)
+
+  useEffect(() => {
+    dispatch(loadCategories())
+  }, [dispatch])
+
+  useEffect(() => {
+    if (isEditMode) dispatch(loadProductById(id))
+  }, [dispatch, id, isEditMode])
+
+  if (isEditMode && !readyForEdit) {
+    return (
+      <SellerLayout active="inventario">
+        <p className="adm-table__empty">Cargando producto...</p>
+      </SellerLayout>
+    )
+  }
+
+  return <ProductForm key={isEditMode ? current?.id || id : 'new'} initialProduct={isEditMode ? current : null} isEditMode={isEditMode} />
 }
 
 export default SellerCreateProduct

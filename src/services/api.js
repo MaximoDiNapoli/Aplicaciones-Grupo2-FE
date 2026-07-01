@@ -84,6 +84,7 @@ function normalizeProduct(product, categoriesById = {}) {
 
   return {
     id: product.id,
+    categoryId: product.categoriaId ?? product.categoryId ?? null,
     name: product.nombre || product.name || 'Producto',
     tagline: product.descripcion || product.tagline || categoryName,
     category: toSlug(categoryName) || product.categoriaId || 'general',
@@ -259,6 +260,22 @@ export async function createProduct(payload, token) {
   if (payload.descuentoFin) form.append('descuentoFin', payload.descuentoFin)
   if (payload.image) form.append('image', payload.image)
   return request('/api/productos', { method: 'POST', body: form, token })
+}
+
+export async function updateProduct(id, payload, token) {
+  const form = new FormData()
+  form.append('nombre', payload.nombre)
+  form.append('precio', payload.precio)
+  form.append('stock', payload.stock)
+  if (payload.categoriaId != null && payload.categoriaId !== '') form.append('categoriaId', payload.categoriaId)
+  if (payload.descripcion) form.append('descripcion', payload.descripcion)
+  if (payload.descuentoPorcentaje != null && payload.descuentoPorcentaje !== '') {
+    form.append('descuentoPorcentaje', payload.descuentoPorcentaje)
+  }
+  if (payload.descuentoInicio) form.append('descuentoInicio', payload.descuentoInicio)
+  if (payload.descuentoFin) form.append('descuentoFin', payload.descuentoFin)
+  if (payload.image) form.append('image', payload.image)
+  return request(`/api/productos/${id}`, { method: 'PUT', body: form, token })
 }
 
 export async function deleteUser(id, token) {

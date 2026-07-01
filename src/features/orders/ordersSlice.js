@@ -27,7 +27,12 @@ const ordersSlice = createSlice({
     handleAsync(builder, updateOrderStatusThunk, (state, { payload }) => {
       state.items = state.items.map((o) => (o.id === payload.id ? { ...o, idEstado: payload.idEstado } : o))
     })
-    handleAsync(builder, createPurchaseThunk)
+    handleAsync(builder, createPurchaseThunk, (state, { payload }) => {
+      if (payload?.id) {
+        state.current = payload
+        state.items = [payload, ...state.items.filter((order) => order.id !== payload.id)]
+      }
+    })
   },
 })
 

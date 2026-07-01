@@ -73,6 +73,7 @@ function App() {
         <Route path="/vendedor" element={<SellerDashboard />} />
         <Route path="/vendedor/inventario" element={<SellerProducts />} />
         <Route path="/vendedor/inventario/nuevo" element={<SellerCreateProduct />} />
+        <Route path="/vendedor/inventario/:id/editar" element={<SellerCreateProduct />} />
         <Route path="/vendedor/inventario/:id" element={<SellerProductDetail />} />
         <Route path="/vendedor/ventas" element={<SellerSales />} />
         <Route path="/vendedor/ventas/:id" element={<SellerOrderDetail />} />
