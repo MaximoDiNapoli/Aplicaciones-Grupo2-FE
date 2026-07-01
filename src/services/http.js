@@ -3,9 +3,7 @@ import { getStoredToken } from './session'
 
 // Cliente Axios único para toda la app (requisito a.txt punto 3: "Uso de Axios para todas las peticiones HTTP").
 // Centraliza baseURL, headers, inyección del token y la normalización de errores del backend.
-// `import.meta.env` existe bajo Vite; el guard permite además importar este módulo fuera de
-// Vite (p. ej. scripts de verificación en Node) sin romper.
-export const API_BASE_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:8080'
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 const http = axios.create({
   baseURL: API_BASE_URL,
