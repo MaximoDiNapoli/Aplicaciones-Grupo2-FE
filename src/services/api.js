@@ -275,7 +275,7 @@ export async function updateProduct(id, payload, token) {
   if (payload.descuentoInicio) form.append('descuentoInicio', payload.descuentoInicio)
   if (payload.descuentoFin) form.append('descuentoFin', payload.descuentoFin)
   if (payload.image) form.append('image', payload.image)
-  return request(`/api/productos/${id}`, { method: 'PUT', body: form, token })
+  return request(`/api/productos/${id}/imagen`, { method: 'PUT', body: form, token })
 }
 
 export async function deleteUser(id, token) {
