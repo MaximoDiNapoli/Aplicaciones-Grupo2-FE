@@ -1,43 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import PublicHeader from '../components/layout/PublicHeader'
 import Footer from '../components/layout/Footer'
 import AccountSidebar from '../components/layout/AccountSidebar'
 import ProductGrid from '../components/product/ProductGrid'
 import { Checkbox, Select } from '../components/ui/Field'
 import Pagination, { usePager } from '../components/ui/Pagination'
-import { fetchCategories, fetchProducts } from '../services/api'
+import { selectProducts, selectProductsError, selectProductsLoading } from '../features/products/productsSlice'
+import { loadCatalog } from '../features/products/productsThunks'
+import { selectCategories, selectCategoriesError, selectCategoriesLoading } from '../features/categories/categoriesSlice'
 
 // Catálogo: filtros por categoría, rango de precio y orden + grilla + paginación.
+// Productos y categorías provienen de sus respectivos slices de Redux.
 function Catalog() {
-  const [categories, setCategories] = useState([])
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dispatch = useDispatch()
+  const categories = useSelector(selectCategories)
+  const products = useSelector(selectProducts)
+  const productsLoading = useSelector(selectProductsLoading)
+  const categoriesLoading = useSelector(selectCategoriesLoading)
+  const productsError = useSelector(selectProductsError)
+  const categoriesError = useSelector(selectCategoriesError)
+  const loading = productsLoading || categoriesLoading
+  const error = productsError || categoriesError
   const [cats, setCats] = useState([])
   const [min, setMin] = useState('')
   const [max, setMax] = useState('')
   const [sort, setSort] = useState('Relevancia')
 
+  // loadCatalog evita el doble GET /api/categorias (categorías una vez, luego productos).
   useEffect(() => {
-    let alive = true
-
-    Promise.all([fetchCategories(), fetchProducts()])
-      .then(([nextCategories, nextProducts]) => {
-        if (!alive) return
-        setCategories(nextCategories)
-        setProducts(nextProducts)
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudo cargar el catálogo')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [])
+    dispatch(loadCatalog())
+  }, [dispatch])
 
   const toggleCat = (id) =>
     setCats((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]))

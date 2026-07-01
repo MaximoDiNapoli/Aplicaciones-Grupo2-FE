@@ -22,7 +22,7 @@ function ProductCard({ product, compact = false }) {
   return (
     <article className={`product-card${compact ? ' product-card--compact' : ''}`}>
       <Link to={`/producto/${product.id}`} className="product-card__media">
-        <ProductImage g={product.g} radius="0" />
+        <ProductImage g={product.g} src={product.imageUrl} alt={product.name} radius="0" />
         {product.badge && (
           <Badge tone={product.badge.tone} className="product-card__badge">{product.badge.label}</Badge>
         )}

@@ -1,6 +1,25 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-const TOKEN_KEY = 'ecomerce.token'
-const USER_KEY = 'ecomerce.user'
+import http, { API_BASE_URL } from './http'
+import {
+  clearStoredSession,
+  extractUserIdFromToken,
+  getStoredToken,
+  getStoredUser,
+  saveStoredSession,
+} from './session'
+
+// Capa de acceso al backend. Toda petición HTTP pasa por el cliente Axios (`http`),
+// que centraliza baseURL, token e interceptores de error. Estas funciones se consumen
+// desde los thunks de cada feature (createAsyncThunk) y, puntualmente, desde componentes.
+
+// Re-exportamos los helpers de sesión para mantener compatibilidad con imports existentes.
+export {
+  getStoredToken,
+  getStoredUser,
+  saveStoredSession,
+  clearStoredSession,
+  extractUserIdFromToken,
+}
+export { API_BASE_URL }
 
 const CATEGORY_ICONS = ['paw', 'butterfly', 'sparkles', 'store']
 const CATEGORY_GRADIENTS = [
@@ -30,90 +49,15 @@ function toSlug(value) {
     .replace(/^-+|-+$/g, '')
 }
 
-export function getStoredToken() {
-  if (typeof localStorage === 'undefined') return ''
-  return localStorage.getItem(TOKEN_KEY) || ''
-}
-
-export function getStoredUser() {
-  if (typeof localStorage === 'undefined') return null
-  const raw = localStorage.getItem(USER_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
-
-export function saveStoredSession(session) {
-  if (typeof localStorage === 'undefined') return
-  if (!session) {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
-    return
-  }
-  if (session.token) {
-    localStorage.setItem(TOKEN_KEY, session.token)
-  } else {
-    localStorage.removeItem(TOKEN_KEY)
-  }
-  if (session.user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(session.user))
-  } else {
-    localStorage.removeItem(USER_KEY)
-  }
-}
-
-export function clearStoredSession() {
-  saveStoredSession(null)
-}
-
-function buildUrl(path, params) {
-  const url = new URL(path, API_BASE_URL)
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value != null && value !== '') {
-        url.searchParams.set(key, value)
-      }
-    })
-  }
-  return url.toString()
-}
-
-async function parseResponse(response) {
-  if (response.status === 204) return null
-  const contentType = response.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) {
-    return response.json()
-  }
-  return response.text()
-}
-
+// Envoltura unificada sobre Axios: mantiene la firma `request(path, options)` que ya
+// usaba la app, pero por dentro delega en el cliente `http`. Devuelve directamente el body.
 async function request(path, { method = 'GET', body, headers = {}, token, params } = {}) {
-  const resolvedToken = token || getStoredToken()
-  const finalHeaders = { ...headers }
-  if (resolvedToken) {
-    finalHeaders.Authorization = `Bearer ${resolvedToken}`
-  }
-  const init = { method, headers: finalHeaders }
-  if (body != null) {
-    if (body instanceof FormData) {
-      init.body = body
-    } else {
-      finalHeaders['Content-Type'] = 'application/json'
-      init.body = JSON.stringify(body)
-    }
-  }
-  const response = await fetch(buildUrl(path, params), init)
-  const parsed = await parseResponse(response)
-  if (!response.ok) {
-    const message = typeof parsed === 'string'
-      ? parsed
-      : parsed?.message || parsed?.error || 'No fue posible completar la solicitud'
-    throw new Error(message)
-  }
-  return parsed
+  const config = { url: path, method, headers, params }
+  if (token !== undefined) config.token = token
+  if (body != null) config.data = body
+  const response = await http(config)
+  // 204 No Content -> axios entrega '' ; lo normalizamos a null.
+  return response.data === '' ? null : response.data
 }
 
 function normalizeCategory(category, index = 0) {
@@ -140,14 +84,13 @@ function normalizeProduct(product, categoriesById = {}) {
 
   return {
     id: product.id,
+    categoryId: product.categoriaId ?? product.categoryId ?? null,
     name: product.nombre || product.name || 'Producto',
     tagline: product.descripcion || product.tagline || categoryName,
     category: toSlug(categoryName) || product.categoriaId || 'general',
     categoryName,
     price: finalPrice,
     oldPrice: hasDiscount ? price : product.oldPrice ?? null,
-    rating: product.rating ?? 4,
-    reviews: product.reviews ?? 0,
     badge: product.activo === false
       ? { tone: 'neutral', label: 'Inactivo' }
       : hasDiscount
@@ -179,22 +122,14 @@ export async function fetchCategories() {
   return categories.map((category, index) => normalizeCategory(category, index))
 }
 
-export async function fetchProducts(params = {}) {
-  const [categories, products] = await Promise.all([
-    fetchCategories().catch(() => []),
-    request('/api/productos', { params }),
-  ])
-  const categoriesById = Object.fromEntries(categories.map((category) => [category.id, category]))
-  return products.map((product) => normalizeProduct(product, categoriesById))
+// Lectura de productos sin pedir /api/categorias: los thunks reutilizan las categorías
+// ya presentes en el store y normalizan con ellas, evitando GET redundantes.
+export async function fetchProductsOnly(params = {}) {
+  return request('/api/productos', { params })
 }
 
-export async function fetchProductById(id) {
-  const [categories, product] = await Promise.all([
-    fetchCategories().catch(() => []),
-    request(`/api/productos/${id}`),
-  ])
-  const categoriesById = Object.fromEntries(categories.map((category) => [category.id, category]))
-  return normalizeProduct(product, categoriesById)
+export async function fetchProductOnly(id) {
+  return request(`/api/productos/${id}`)
 }
 
 export async function fetchUsers(params = {}) {
@@ -227,6 +162,23 @@ export async function createAddress(payload, token) {
 
 export async function fetchPaymentMethods(token) {
   return request('/api/metodos-pago', { token })
+}
+
+export async function createPaymentMethod(payload, token) {
+  return request('/api/metodos-pago', { method: 'POST', body: payload, token })
+}
+
+export async function deletePaymentMethod(id, token) {
+  return request(`/api/metodos-pago/${id}`, { method: 'DELETE', token })
+}
+
+// Reseñas de producto (rating + comentario). GET público; POST solo COMPRADOR.
+export async function fetchResenas(productoId) {
+  return request('/api/resenas', { params: { producto: productoId } })
+}
+
+export async function createResena(payload, token) {
+  return request('/api/resenas', { method: 'POST', body: payload, token })
 }
 
 export async function fetchCarts(token) {
@@ -307,6 +259,22 @@ export async function createProduct(payload, token) {
   return request('/api/productos', { method: 'POST', body: form, token })
 }
 
+export async function updateProduct(id, payload, token) {
+  const form = new FormData()
+  form.append('nombre', payload.nombre)
+  form.append('precio', payload.precio)
+  form.append('stock', payload.stock)
+  if (payload.categoriaId != null && payload.categoriaId !== '') form.append('categoriaId', payload.categoriaId)
+  if (payload.descripcion) form.append('descripcion', payload.descripcion)
+  if (payload.descuentoPorcentaje != null && payload.descuentoPorcentaje !== '') {
+    form.append('descuentoPorcentaje', payload.descuentoPorcentaje)
+  }
+  if (payload.descuentoInicio) form.append('descuentoInicio', payload.descuentoInicio)
+  if (payload.descuentoFin) form.append('descuentoFin', payload.descuentoFin)
+  if (payload.image) form.append('image', payload.image)
+  return request(`/api/productos/${id}/imagen`, { method: 'PUT', body: form, token })
+}
+
 export async function deleteUser(id, token) {
   return request(`/api/users/${id}`, { method: 'DELETE', token })
 }
@@ -345,24 +313,9 @@ export async function resolveSessionFromToken(token) {
   }
 }
 
-export function extractUserIdFromToken(token) {
-  if (!token) return null
-  const parts = token.split('.')
-  if (parts.length !== 3) return null
-  try {
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
-    // El subject del token es el id del usuario (con fallback al antiguo claim userId).
-    const raw = payload.sub ?? payload.userId
-    const id = Number(raw)
-    return Number.isInteger(id) ? id : null
-  } catch {
-    return null
-  }
-}
-
 export async function fetchSellerProducts(token) {
   const userId = extractUserIdFromToken(token || getStoredToken())
   return request('/api/productos', { params: userId ? { usuario: userId } : undefined, token })
 }
 
-export { API_BASE_URL, buildUrl as buildApiUrl, request as apiRequest, normalizeCategory, normalizeProduct }
+export { request as apiRequest, normalizeCategory, normalizeProduct }

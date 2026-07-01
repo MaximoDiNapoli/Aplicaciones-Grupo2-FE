@@ -52,6 +52,18 @@
 .btn--outline:hover { background: var(--brand-soft); }
 .btn--ghost { background: transparent; color: var(--brand); padding-left: 8px; padding-right: 8px; }
 .btn--ghost:hover { color: var(--brand-strong); }
+.btn--danger { background: #e5484d; color: #fff; }
+.btn--danger:hover { background: #cf3b40; }
+
+/* ---------- Modal de confirmación ---------- */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(20,12,8,.45); backdrop-filter: blur(2px); animation: modal-fade .16s ease-out; }
+.modal { width: 100%; max-width: 430px; background: #fff; border-radius: var(--radius, 16px); padding: 26px; box-shadow: 0 24px 70px rgba(0,0,0,.28); animation: modal-in .18s ease-out; }
+.modal__title { font-size: 20px; font-weight: 800; margin: 0 0 10px; color: var(--ink, #2b2118); display: flex; align-items: center; gap: 10px; }
+.modal__title .modal__icon { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #fdecec; color: #e5484d; flex: none; }
+.modal__message { margin: 0 0 22px; color: var(--muted, #6b6155); line-height: 1.55; }
+.modal__actions { display: flex; justify-content: flex-end; gap: 12px; }
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
 
 /* ---------- Fields ---------- */
 .field { display: flex; flex-direction: column; gap: 7px; }
@@ -140,7 +152,8 @@
 
 /* ---------- Product image ---------- */
 .product-image { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; }
-.product-image__shine { position: absolute; inset: 0; background: radial-gradient(60% 50% at 30% 20%, rgba(255,255,255,.35), transparent 60%); }
+.product-image__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.product-image__shine { position: absolute; inset: 0; background: radial-gradient(60% 50% at 30% 20%, rgba(255,255,255,.35), transparent 60%); pointer-events: none; }
 
 /* ---------- Product card / grid ---------- */
 .product-grid { display: grid; gap: 22px; }

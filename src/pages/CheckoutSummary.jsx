@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import CheckoutLayout from '../components/layout/CheckoutLayout'
 import ProductImage from '../components/product/ProductImage'
 import { Checkbox } from '../components/ui/Field'
@@ -8,18 +9,25 @@ import Icon from '../components/ui/Icon'
 import { formatPrice } from '../components/ui/Misc'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
-import { createPurchase } from '../services/api'
+import { createPurchaseThunk } from '../features/orders/ordersThunks'
+import { clearOrdersError, selectOrdersError, selectOrdersLoading } from '../features/orders/ordersSlice'
 
-// Checkout paso 3: revisión final + creación real de la compra en el backend.
+// Checkout paso 3: revisión final + creación real de la compra en el backend (thunk).
 function CheckoutSummary() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [accept, setAccept] = useState(false) // términos desmarcados por defecto
-  const [placing, setPlacing] = useState(false)
-  const [orderError, setOrderError] = useState('')
   const { items, subtotal, cartId, clearLocal } = useCart()
-  const { shipping: shipAddr, payment, setLastOrder, reset } = useCheckout()
+  const { shipping: shipAddr, payment, setLastOrder } = useCheckout()
+  const placing = useSelector(selectOrdersLoading)
+  const orderError = useSelector(selectOrdersError)
   const summary = buildCheckoutSummary(items, subtotal)
   const { count, shipping, discount, total } = summary
+
+  // Al entrar, descarta cualquier error de compras previo para no mostrarlo de arrastre.
+  useEffect(() => {
+    dispatch(clearOrdersError())
+  }, [dispatch])
 
   // Sin dirección o método de pago, volvemos al paso correspondiente.
   useEffect(() => {
@@ -32,21 +40,17 @@ function CheckoutSummary() {
   // El carrito ya vive en el backend: solo se genera la compra a partir de él.
   const finish = async () => {
     if (!canFinish) return
-    setPlacing(true)
-    setOrderError('')
-    try {
-      const compra = await createPurchase(cartId, {
-        idMetodoPago: payment.idMetodoPago,
-        idDireccionEnvio: shipAddr.id,
-      })
-      setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
-      clearLocal() // el backend ya vació el carrito al crear la compra
-      navigate(`/compras/${compra.id}`, { replace: true })
-    } catch (err) {
-      setOrderError(err.message || 'No se pudo completar la compra')
-    } finally {
-      setPlacing(false)
+    const action = await dispatch(createPurchaseThunk({
+      cartId,
+      payload: { idMetodoPago: payment.idMetodoPago, idDireccionEnvio: shipAddr.id },
+    }))
+    if (action.error) {
+      return
     }
+    const compra = action.payload
+    setLastOrder({ id: compra.id, total: Number(compra.total ?? total), items: summary.items })
+    clearLocal() // el backend ya vació el carrito al crear la compra
+    navigate(`/compras/${compra.id}`, { replace: true })
   }
 
   return (
@@ -88,7 +92,7 @@ function CheckoutSummary() {
             </header>
             {summary.items.map((it) => (
               <div className="review-item" key={it.id}>
-                <ProductImage g={it.g} className="review-item__img" />
+                <ProductImage g={it.g} src={it.imageUrl} alt={it.name} className="review-item__img" />
                 <div className="review-item__info">
                   <div className="review-card__name">{it.name}</div>
                   {it.variant && <div className="review-card__lines">{it.variant}</div>}

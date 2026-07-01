@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { useDispatch } from 'react-redux'
 import AuthLayout from '../components/layout/AuthLayout'
 import { TextInput, PasswordInput, Checkbox } from '../components/ui/Field'
 import Button from '../components/ui/Button'
 import { useAuth } from '../store/auth'
-import { login, resolveSessionFromToken } from '../services/api'
+import { loginUser } from '../features/auth/authThunks'
 
 function landingPath(rol = '') {
   const normalized = String(rol).trim().toUpperCase()
@@ -15,7 +16,8 @@ function landingPath(rol = '') {
 
 function Login() {
   const navigate = useNavigate()
-  const { signIn, signInAsGuest } = useAuth()
+  const dispatch = useDispatch()
+  const { signInAsGuest } = useAuth()
   const [remember, setRemember] = useState(false)
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
@@ -33,16 +35,14 @@ function Login() {
       return
     }
     setLoading(true)
-    try {
-      const auth = await login({ email, password })
-      const session = await resolveSessionFromToken(auth.accessToken)
-      signIn(session || { token: auth.accessToken, user: null })
-      navigate(landingPath(session?.user?.rol))
-    } catch (err) {
-      setError(err.message || 'No fue posible iniciar sesión')
-    } finally {
-      setLoading(false)
+    // El thunk loginUser resuelve token + usuario y actualiza el slice `auth`.
+    const action = await dispatch(loginUser({ email, password }))
+    setLoading(false)
+    if (action.error) {
+      setError(action.payload || 'No fue posible iniciar sesión')
+      return
     }
+    navigate(landingPath(action.payload?.user?.rol))
   }
   const enterAsGuest = () => { signInAsGuest(); navigate('/') }
   return (

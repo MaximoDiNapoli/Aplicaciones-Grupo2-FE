@@ -1,58 +1,83 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { AdminLayout, PageTitle, Avatar, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import { TextInput, Select } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
-import { useToast } from '../../store/toast'
-import { adminPaymentProviders } from '../../data/mock'
-import { createUser, deleteUser, fetchUsers, updateUser } from '../../services/api'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { notify } from '../../features/ui/toastSlice'
+import {
+  selectUsers,
+  selectUsersError,
+  selectUsersLoading,
+} from '../../features/users/usersSlice'
+import {
+  createUserThunk,
+  deleteUserThunk,
+  loadUsers,
+  updateUserThunk,
+} from '../../features/users/usersThunks'
+import { selectMetodosPago, selectMetodosPagoLoading } from '../../features/metodosPago/metodosPagoSlice'
+import { createMetodoPagoThunk, deleteMetodoPagoThunk, loadMetodosPago } from '../../features/metodosPago/metodosPagoThunks'
 
 const ROLES = ['COMPRADOR', 'VENDEDOR', 'ADMINISTRADOR']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Gestión de Usuarios + panel de Métodos de Pago (pasarelas, demo sin backend).
+// Gestión de Usuarios + panel de Métodos de Pago (datos reales: /api/metodos-pago).
+// El listado/loading/error provienen del store de Redux (slices `users` y `metodosPago`).
 function AdminUsers() {
-  const notify = useToast()
+  const dispatch = useDispatch()
+  const rawUsers = useSelector(selectUsers)
+  const loading = useSelector(selectUsersLoading)
+  const error = useSelector(selectUsersError)
+  const metodosPago = useSelector(selectMetodosPago)
+  const metodosLoading = useSelector(selectMetodosPagoLoading)
+
   const [q, setQ] = useState('')
   const [role, setRole] = useState('Todos los Roles')
-  const [users, setUsers] = useState([])
-  const [providers, setProviders] = useState(adminPaymentProviders)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
+  const [metodoForm, setMetodoForm] = useState({ tipo: '', descripcion: '' })
+  const [savingMetodo, setSavingMetodo] = useState(false)
+  // confirm = null | { title, message, onConfirm } -> modal de confirmación de borrado
+  const [confirm, setConfirm] = useState(null)
   // form = null | { id?, nombre, email, telefono, rol, password }
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    let alive = true
+    dispatch(loadUsers())
+    dispatch(loadMetodosPago())
+  }, [dispatch])
 
-    fetchUsers()
-      .then((nextUsers) => {
-        if (!alive) return
-        setUsers(nextUsers.map((user) => ({
-          id: user.id,
-          name: user.nombre,
-          email: user.email,
-          telefono: user.telefono || '',
-          role: user.rol || 'COMPRADOR',
-          activity: user.createdAt ? `Registrado ${new Date(user.createdAt).toLocaleDateString('es-AR')}` : 'Sin actividad',
-          status: 'Activo',
-        })))
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudieron cargar los usuarios')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
+  const addMetodo = async (e) => {
+    e.preventDefault()
+    const tipo = metodoForm.tipo.trim()
+    if (!tipo) { dispatch(notify('El tipo del método de pago es obligatorio.')); return }
+    setSavingMetodo(true)
+    const action = await dispatch(createMetodoPagoThunk({ tipo, descripcion: metodoForm.descripcion.trim() }))
+    setSavingMetodo(false)
+    if (action.error) { dispatch(notify(action.payload || 'No se pudo crear el método de pago')); return }
+    dispatch(notify(`Método de pago "${tipo}" creado`))
+    setMetodoForm({ tipo: '', descripcion: '' })
+  }
 
-    return () => { alive = false }
-  }, [reloadKey])
+  const removeMetodo = async (id, tipo) => {
+    const action = await dispatch(deleteMetodoPagoThunk(id))
+    if (action.error) { dispatch(notify(action.payload || 'No se pudo eliminar el método de pago')); return }
+    dispatch(notify(`Método de pago "${tipo}" eliminado`))
+  }
+
+  // Adapta los usuarios del backend al formato de la tabla.
+  const users = useMemo(() => rawUsers.map((user) => ({
+    id: user.id,
+    name: user.nombre,
+    email: user.email,
+    telefono: user.telefono || '',
+    role: user.rol || 'COMPRADOR',
+    activity: user.createdAt ? `Registrado ${new Date(user.createdAt).toLocaleDateString('es-AR')}` : 'Sin actividad',
+    status: 'Activo',
+  })), [rawUsers])
 
   const openCreate = () => { setFormError(''); setForm({ nombre: '', email: '', telefono: '', rol: 'COMPRADOR', password: '' }) }
   const openEdit = (u) => { setFormError(''); setForm({ id: u.id, nombre: u.name, email: u.email, telefono: u.telefono, rol: u.role, password: '' }) }
@@ -66,35 +91,28 @@ function AdminUsers() {
     if (!EMAIL_RE.test(email)) { setFormError('Ingresá un email válido.'); return }
     if (!form.id && form.password.length < 6) { setFormError('La contraseña debe tener al menos 6 caracteres.'); return }
     setSaving(true)
-    try {
-      const payload = { nombre, email, telefono: form.telefono.trim(), rol: form.rol }
-      if (form.id) {
-        await updateUser(form.id, payload)
-        notify(`Usuario "${nombre}" actualizado`)
-      } else {
-        await createUser({ ...payload, password: form.password })
-        notify(`Usuario "${nombre}" creado`)
-      }
-      closeForm()
-      setReloadKey((k) => k + 1)
-    } catch (err) {
-      setFormError(err.message || 'No se pudo guardar el usuario')
-    } finally {
-      setSaving(false)
+    const payload = { nombre, email, telefono: form.telefono.trim(), rol: form.rol }
+    const action = form.id
+      ? await dispatch(updateUserThunk({ id: form.id, payload }))
+      : await dispatch(createUserThunk({ ...payload, password: form.password }))
+    setSaving(false)
+    if (action.error) {
+      setFormError(action.payload || 'No se pudo guardar el usuario')
+      return
     }
+    dispatch(notify(form.id ? `Usuario "${nombre}" actualizado` : `Usuario "${nombre}" creado`))
+    closeForm()
+    // Sin recarga: el slice `users` ya aplica el usuario devuelto por el thunk (create/update).
   }
 
   const removeUser = async (id, name) => {
-    try {
-      await deleteUser(id)
-      setUsers((list) => list.filter((u) => u.id !== id))
-      notify(`Usuario ${name} eliminado`)
-    } catch (err) {
-      notify(err.message || 'No se pudo eliminar el usuario')
+    const action = await dispatch(deleteUserThunk(id))
+    if (action.error) {
+      dispatch(notify(action.payload || 'No se pudo eliminar el usuario'))
+      return
     }
+    dispatch(notify(`Usuario ${name} eliminado`))
   }
-  const toggleProvider = (id) =>
-    setProviders((list) => list.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))
 
   const filtered = users.filter((u) => {
     const text = `${u.name} ${u.email} ${u.id}`.toLowerCase()
@@ -157,7 +175,7 @@ function AdminUsers() {
             <span><span className={`dot-status dot-status--${pillTone(u.status)}`} />{cap(u.status)}</span>
             <span className="adm-actions ta-right">
               <button className="icon-action" aria-label="Editar" onClick={() => openEdit(u)}><Icon name="pencil" size={17} strokeFill /></button>
-              <button className="icon-action" aria-label="Eliminar" onClick={() => removeUser(u.id, u.name)}><Icon name="trash" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Eliminar" onClick={() => setConfirm({ title: 'Eliminar usuario', message: `¿Seguro que querés eliminar a "${u.name}"? Esta acción no se puede deshacer.`, onConfirm: () => removeUser(u.id, u.name) })}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
         ))}
@@ -171,28 +189,41 @@ function AdminUsers() {
       <div className="dash-pagetitle" style={{ marginTop: 36 }}>
         <div>
           <h2 className="dash-pagetitle__title" style={{ fontSize: 26 }}>Métodos de Pago</h2>
-          <p className="dash-pagetitle__sub">Gestiona las pasarelas activas (demo: sin backend dedicado).</p>
+          <p className="dash-pagetitle__sub">Gestiona los métodos de pago disponibles (datos reales del backend).</p>
         </div>
       </div>
-      <div className="provider-grid">
-        {providers.map((p) => (
-          <section className={`provider-card${p.enabled ? '' : ' is-off'}`} key={p.id}>
-            <div className="provider-card__head">
-              <span className="provider-card__name"><Icon name="card" size={20} strokeFill /> {p.name}</span>
-              <button
-                type="button"
-                className={`toggle${p.enabled ? ' is-on' : ''}`}
-                aria-pressed={p.enabled}
-                aria-label={`${p.enabled ? 'Desactivar' : 'Activar'} ${p.name}`}
-                onClick={() => toggleProvider(p.id)}
-              >
-                <span className="toggle__knob" />
-              </button>
-            </div>
-            <div className="provider-card__state"><span className="adm-muted">Estado</span><Pill tone={p.enabled ? 'pink' : 'neutral'}>{p.enabled ? 'Activo' : 'Inactivo'}</Pill></div>
-          </section>
+
+      <form className="filter-fields" onSubmit={addMetodo} style={{ alignItems: 'flex-end' }}>
+        <TextInput label="Tipo *" placeholder="Ej. Tarjeta de crédito" value={metodoForm.tipo} onChange={(e) => setMetodoForm((f) => ({ ...f, tipo: e.target.value }))} />
+        <TextInput label="Descripción" placeholder="Opcional" value={metodoForm.descripcion} onChange={(e) => setMetodoForm((f) => ({ ...f, descripcion: e.target.value }))} />
+        <Button type="submit" iconLeft="plus" disabled={savingMetodo}>{savingMetodo ? 'Agregando...' : 'Agregar método'}</Button>
+      </form>
+
+      <div className="adm-table" style={{ marginTop: 12 }}>
+        <div className="adm-table__head" style={{ gridTemplateColumns: '0.6fr 1.6fr 3fr 0.8fr' }}>
+          <span>ID</span><span>Tipo</span><span>Descripción</span><span className="ta-right">Acciones</span>
+        </div>
+        {metodosLoading && <div className="adm-table__empty">Cargando métodos de pago...</div>}
+        {!metodosLoading && metodosPago.map((m) => (
+          <div className="adm-table__row" key={m.id} style={{ gridTemplateColumns: '0.6fr 1.6fr 3fr 0.8fr' }}>
+            <span className="adm-muted">{m.id}</span>
+            <span className="adm-cell-user"><Icon name="card" size={18} strokeFill /> <span className="adm-strong">{m.tipo}</span></span>
+            <span className="adm-muted">{m.descripcion || '—'}</span>
+            <span className="adm-actions ta-right">
+              <button className="icon-action" aria-label="Eliminar" onClick={() => setConfirm({ title: 'Eliminar método de pago', message: `¿Seguro que querés eliminar el método de pago "${m.tipo}"?`, onConfirm: () => removeMetodo(m.id, m.tipo) })}><Icon name="trash" size={17} strokeFill /></button>
+            </span>
+          </div>
         ))}
+        {!metodosLoading && metodosPago.length === 0 && <div className="adm-table__empty">No hay métodos de pago cargados.</div>}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title={confirm?.title}
+        message={confirm?.message}
+        onConfirm={confirm?.onConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </AdminLayout>
   )
 }

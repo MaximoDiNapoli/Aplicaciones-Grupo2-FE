@@ -1,38 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import CategoryCard from '../components/product/CategoryCard'
 import ProductGrid from '../components/product/ProductGrid'
 import SectionHeader from '../components/common/SectionHeader'
 import Button from '../components/ui/Button'
-import { fetchCategories, fetchProducts } from '../services/api'
+import { selectProducts, selectProductsError, selectProductsLoading } from '../features/products/productsSlice'
+import { loadCatalog } from '../features/products/productsThunks'
+import { selectCategories, selectCategoriesLoading } from '../features/categories/categoriesSlice'
 
-// Inicio - hero + habitats (categorías) + descubrimientos destacados.
+// Inicio - hero + habitats (categorías) + descubrimientos destacados (slices Redux).
 function Home() {
-  const [categories, setCategories] = useState([])
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dispatch = useDispatch()
+  const categories = useSelector(selectCategories)
+  const products = useSelector(selectProducts)
+  const productsLoading = useSelector(selectProductsLoading)
+  const categoriesLoading = useSelector(selectCategoriesLoading)
+  const loading = productsLoading || categoriesLoading
+  const error = useSelector(selectProductsError)
 
+  // loadCatalog pide /api/categorias una sola vez y luego /api/productos (reutiliza categorías).
   useEffect(() => {
-    let alive = true
-
-    Promise.all([fetchCategories(), fetchProducts()])
-      .then(([nextCategories, nextProducts]) => {
-        if (!alive) return
-        setCategories(nextCategories)
-        setProducts(nextProducts)
-        setError('')
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudo cargar el catálogo')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-  }, [])
+    dispatch(loadCatalog())
+  }, [dispatch])
 
   const featured = products.slice(0, 3)
   return (

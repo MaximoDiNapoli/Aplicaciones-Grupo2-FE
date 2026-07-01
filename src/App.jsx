@@ -1,8 +1,11 @@
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import './styles/app.css'
 import './styles/dashboard.css'
 import { useAuth } from './store/auth'
+import { selectToken, setSession, signOut } from './features/auth/authSlice'
+import { fetchCurrentUser } from './services/api'
 
 import Home from './pages/Home'
 import Catalog from './pages/Catalog'
@@ -40,6 +43,23 @@ function RequireAccount({ children }) {
   return children
 }
 
+// Valida al arrancar la sesión persistida en localStorage: si el token guardado ya no
+// es válido (vencido/revocado -> 401/403), cierra sesión para quedar deslogueado en vez
+// de mostrar una identidad obsoleta. Ante errores de red NO toca la sesión.
+function SessionValidator() {
+  const dispatch = useDispatch()
+  const token = useSelector(selectToken)
+  useEffect(() => {
+    if (!token) return undefined
+    let alive = true
+    fetchCurrentUser()
+      .then((user) => { if (alive && user) dispatch(setSession({ token, user })) })
+      .catch((err) => { if (alive && (err.status === 401 || err.status === 403)) dispatch(signOut()) })
+    return () => { alive = false }
+  }, [token, dispatch])
+  return null
+}
+
 // Lleva el scroll al inicio en cada cambio de ruta.
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -51,6 +71,7 @@ function ScrollToTop() {
 function App() {
   return (
     <>
+      <SessionValidator />
       <ScrollToTop />
       <Routes>
         {/* Usuario final */}
@@ -73,6 +94,7 @@ function App() {
         <Route path="/vendedor" element={<SellerDashboard />} />
         <Route path="/vendedor/inventario" element={<SellerProducts />} />
         <Route path="/vendedor/inventario/nuevo" element={<SellerCreateProduct />} />
+        <Route path="/vendedor/inventario/:id/editar" element={<SellerCreateProduct />} />
         <Route path="/vendedor/inventario/:id" element={<SellerProductDetail />} />
         <Route path="/vendedor/ventas" element={<SellerSales />} />
         <Route path="/vendedor/ventas/:id" element={<SellerOrderDetail />} />

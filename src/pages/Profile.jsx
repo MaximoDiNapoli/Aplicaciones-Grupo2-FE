@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import AccountLayout from '../components/layout/AccountLayout'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
-import { useToast } from '../store/toast'
-import { useAuth } from '../store/auth'
-import { fetchCurrentUser, updateCurrentUser } from '../services/api'
+import { notify } from '../features/ui/toastSlice'
+import { selectAuth, signOut } from '../features/auth/authSlice'
+import { loadCurrentUser, saveProfile } from '../features/auth/authThunks'
 
 function formatDate(value) {
   if (!value) return 'Fecha no disponible'
@@ -15,48 +16,30 @@ function formatDate(value) {
 }
 
 // Perfil de Usuario: tarjeta de perfil editable + stats.
+// El perfil (user), loading y error provienen del slice `auth`.
 function Profile() {
-  const notify = useToast()
   const navigate = useNavigate()
-  const { signOut, token, user, updateUser } = useAuth()
-  const logout = () => { signOut(); navigate('/login') }
+  const dispatch = useDispatch()
+  const { user: profile, token, loading, error } = useSelector(selectAuth)
+  const logout = () => { dispatch(signOut()); navigate('/login') }
   const [editing, setEditing] = useState(false)
-  const [profile, setProfile] = useState(user)
-  const [email, setEmail] = useState(user?.email || '')
-  const [phone, setPhone] = useState(user?.telefono || '')
-  const [loading, setLoading] = useState(Boolean(token))
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [syncedId, setSyncedId] = useState(null)
 
+  // Refresca el perfil desde el backend al entrar (si hay sesión).
   useEffect(() => {
-    let alive = true
+    if (token) dispatch(loadCurrentUser())
+  }, [token, dispatch])
 
-    if (!token) {
-      return undefined
-    }
-
-    fetchCurrentUser(token)
-      .then((nextUser) => {
-        if (!alive) return
-        setProfile(nextUser)
-        setEmail(nextUser.email || '')
-        setPhone(nextUser.telefono || '')
-        setError('')
-        updateUser(nextUser)
-      })
-      .catch((err) => {
-        if (!alive) return
-        setError(err.message || 'No se pudo cargar el perfil')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-
-    return () => { alive = false }
-    // `updateUser` se omite a propósito: su identidad cambia con cada setSession y
-    // volver a incluirlo provocaría un bucle infinito de peticiones a /api/users/me.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  // Sincroniza los campos editables cuando llega/cambia el perfil del store
+  // (ajuste de estado durante el render, patrón recomendado por React).
+  if (profile && profile.id !== syncedId) {
+    setSyncedId(profile.id)
+    setEmail(profile.email || '')
+    setPhone(profile.telefono || '')
+  }
 
   const stats = useMemo(() => {
     if (!profile) return []
@@ -70,31 +53,23 @@ function Profile() {
   const toggleEdit = async () => {
     if (editing) {
       const emailVal = email.trim()
-      if (!emailVal) { notify('El correo no puede quedar vacío.'); return }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) { notify('Ingresá un correo electrónico válido.'); return }
+      if (!emailVal) { dispatch(notify('El correo no puede quedar vacío.')); return }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) { dispatch(notify('Ingresá un correo electrónico válido.')); return }
       setSaving(true)
-      try {
-        // No enviamos "rol": el backend solo permite cambiarlo a un admin y el usuario
-        // edita su propio perfil (enviarlo haría que un comprador reciba 403).
-        const nextUser = await updateCurrentUser({
-          nombre: profile?.nombre || '',
-          email: emailVal,
-          telefono: phone.trim(),
-        }, token)
-        setProfile(nextUser)
-        updateUser(nextUser)
-        notify('Perfil actualizado')
-      } catch (err) {
-        notify(err.message || 'No se pudo actualizar el perfil')
+      // No enviamos "rol": el backend solo permite cambiarlo a un admin y el usuario
+      // edita su propio perfil (enviarlo haría que un comprador reciba 403).
+      const action = await dispatch(saveProfile({ nombre: profile?.nombre || '', email: emailVal, telefono: phone.trim() }))
+      setSaving(false)
+      if (action.error) {
+        dispatch(notify(action.payload || 'No se pudo actualizar el perfil'))
         return
-      } finally {
-        setSaving(false)
       }
+      dispatch(notify('Perfil actualizado'))
     }
     setEditing((v) => !v)
   }
 
-  if (loading) {
+  if (loading && !profile) {
     return <AccountLayout activeItem="cuenta"><p className="catalog__empty">Cargando perfil...</p></AccountLayout>
   }
 
