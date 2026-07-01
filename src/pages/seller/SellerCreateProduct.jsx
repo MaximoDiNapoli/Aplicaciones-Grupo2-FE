@@ -28,6 +28,8 @@ function buildInitialForm(product) {
   }
 }
 
+const MAX_IMAGE_MB = 10 // debe coincidir con spring.servlet.multipart.max-file-size del backend
+
 function ProductForm({ initialProduct, isEditMode }) {
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -45,6 +47,18 @@ function ProductForm({ initialProduct, isEditMode }) {
   const [image, setImage] = useState(() => buildInitialForm(initialProduct).image)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Valida el tamaño en el cliente para dar un mensaje claro y evitar el error de red
+  // cuando el archivo excede el límite del servidor.
+  const onPickImage = (file) => {
+    if (file && file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      setError(`La imagen supera el máximo de ${MAX_IMAGE_MB} MB. Elegí una más liviana.`)
+      setImage(null)
+      return
+    }
+    if (error) setError('')
+    setImage(file)
+  }
 
   const precioNum = Number(precio) || 0
   const descuentoNum = discount ? Number(descuento) || 0 : 0
@@ -154,8 +168,8 @@ function ProductForm({ initialProduct, isEditMode }) {
             <label className="uploader" style={{ cursor: 'pointer' }}>
               <Icon name="upload" size={34} strokeFill className="uploader__icon" />
               <p><strong>Haz clic para subir</strong> o arrastra y suelta</p>
-              <span className="uploader__hint">{image ? image.name : 'PNG, JPG (Máx. 5MB)'}</span>
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => setImage(e.target.files?.[0] || null)} />
+              <span className="uploader__hint">{image ? image.name : 'PNG, JPG (Máx. 10MB)'}</span>
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onPickImage(e.target.files?.[0] || null)} />
             </label>
             {image && (
               <button type="button" className="uploader__hint" style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setImage(null)}>
