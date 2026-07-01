@@ -77,6 +77,7 @@ function SellerOrderDetail() {
       price: Number(it.precioUnitario || 0),
       subtotal: Number(it.subtotal || it.precioUnitario * it.cantidad || 0),
       g: product?.g || ['#ff8c42', '#ff619b'],
+      imageUrl: product?.imageUrl,
     }
   })
   const subtotal = detailItems.reduce((sum, it) => sum + it.subtotal, 0)
@@ -133,7 +134,7 @@ function SellerOrderDetail() {
           </div>
           {detailItems.map((it) => (
             <div className="adm-table__row" key={it.id} style={{ gridTemplateColumns: '2fr 0.8fr 1fr 1fr' }}>
-              <span className="adm-cell-user"><ProductImage g={it.g} className="adm-thumb" /> <span className="adm-strong">{it.name}</span></span>
+              <span className="adm-cell-user"><ProductImage g={it.g} src={it.imageUrl} alt={it.name} className="adm-thumb" /> <span className="adm-strong">{it.name}</span></span>
               <span className="ta-right">{it.qty}</span>
               <span className="ta-right adm-muted">{formatPrice(it.price)}</span>
               <span className="ta-right adm-strong">{formatPrice(it.subtotal)}</span>

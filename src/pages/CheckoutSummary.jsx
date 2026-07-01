@@ -92,7 +92,7 @@ function CheckoutSummary() {
             </header>
             {summary.items.map((it) => (
               <div className="review-item" key={it.id}>
-                <ProductImage g={it.g} className="review-item__img" />
+                <ProductImage g={it.g} src={it.imageUrl} alt={it.name} className="review-item__img" />
                 <div className="review-item__info">
                   <div className="review-card__name">{it.name}</div>
                   {it.variant && <div className="review-card__lines">{it.variant}</div>}

@@ -115,7 +115,7 @@ function ProductDetail() {
 
       <div className="pdp">
         <div className="pdp__gallery">
-          <ProductImage g={product.gallery[active]} className="pdp__main" />
+          <ProductImage g={product.gallery[active]} src={active === 0 ? product.imageUrl : undefined} alt={product.name} className="pdp__main" />
           <div className="pdp__thumbs">
             {product.gallery.map((g, i) => (
               <button
@@ -124,7 +124,7 @@ function ProductDetail() {
                 onClick={() => setActive(i)}
                 aria-label={`Vista ${i + 1}`}
               >
-                <ProductImage g={g} radius="10px" />
+                <ProductImage g={g} src={i === 0 ? product.imageUrl : undefined} alt={product.name} radius="10px" />
               </button>
             ))}
           </div>

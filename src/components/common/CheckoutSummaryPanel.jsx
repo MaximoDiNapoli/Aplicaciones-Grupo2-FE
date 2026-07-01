@@ -12,7 +12,7 @@ function CheckoutSummaryPanel({ summary, title = 'Resumen de la Orden', shipping
       <div className="checkout-summary__items">
         {summary.items.map((it) => (
           <div className="checkout-summary__item" key={it.id}>
-            <ProductImage g={it.g} className="checkout-summary__thumb" />
+            <ProductImage g={it.g} src={it.imageUrl} alt={it.name} className="checkout-summary__thumb" />
             <div className="checkout-summary__meta">
               <div className="checkout-summary__name">{it.name}</div>
               <div className="checkout-summary__variant">{it.variant}{it.qty ? ` · Cant. ${it.qty}` : ''}</div>

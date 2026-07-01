@@ -6,7 +6,7 @@ import Icon from '../ui/Icon'
 function CartItemRow({ item, onQtyChange, onRemove }) {
   return (
     <div className="cart-row">
-      <ProductImage g={item.g} className="cart-row__img" />
+      <ProductImage g={item.g} src={item.imageUrl} alt={item.name} className="cart-row__img" />
       <div className="cart-row__info">
         <div className="cart-row__name">{item.name}</div>
         {item.variant && <div className="cart-row__variant">{item.variant}</div>}

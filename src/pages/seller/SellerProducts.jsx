@@ -71,7 +71,7 @@ function SellerProducts() {
         {error && <div className="adm-table__empty">{error}</div>}
         {!loading && !error && slice.map((p) => (
           <div className="adm-table__row" key={p.id} style={{ gridTemplateColumns: '70px 1.6fr 1fr 0.8fr 1.1fr 0.9fr 0.9fr' }}>
-            <ProductImage g={p.g} className="adm-thumb" />
+            <ProductImage g={p.g} src={p.imageUrl} alt={p.name} className="adm-thumb" />
             <span className="adm-strong">{p.name}</span>
             <span className="adm-muted">{p.category}</span>
             <span>{formatPrice(p.price)}</span>

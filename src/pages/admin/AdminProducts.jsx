@@ -90,7 +90,7 @@ function AdminProducts() {
         {!loading && !error && slice.map((p) => (
           <div className="adm-table__row" key={p.id} style={{ gridTemplateColumns: '2fr 1fr 1.3fr 0.8fr 1fr 0.8fr' }}>
             <span className="adm-cell-user">
-              <ProductImage g={p.g} className="adm-thumb" />
+              <ProductImage g={p.g} src={p.imageUrl} alt={p.name} className="adm-thumb" />
               <span><span className="adm-strong">{p.name}</span><br /><span className="adm-mono">SKU: {p.sku}</span></span>
             </span>
             <span className="adm-muted">{p.categoryName}</span>

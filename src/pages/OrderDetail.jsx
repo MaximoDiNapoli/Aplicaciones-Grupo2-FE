@@ -58,6 +58,7 @@ function OrderDetail() {
       qty: it.cantidad,
       price: Number(it.precioUnitario || 0),
       g: product?.g || ['#ff8c42', '#ff619b'],
+      imageUrl: product?.imageUrl,
     }
   })
   const totals = {
@@ -97,7 +98,7 @@ function OrderDetail() {
           <h2 className="order-items__title">Selección de Dulces</h2>
           {detailItems.map((it) => (
             <div className="order-item" key={it.id}>
-              <ProductImage g={it.g} className="order-item__img" />
+              <ProductImage g={it.g} src={it.imageUrl} alt={it.name} className="order-item__img" />
               <div className="order-item__info">
                 <div className="order-item__name">{it.name}</div>
                 <div className="order-item__variant">{it.variant}</div>

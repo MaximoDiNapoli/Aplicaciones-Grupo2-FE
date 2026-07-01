@@ -67,11 +67,11 @@ function SellerProductDetail() {
 
       <div className="spd-grid">
         <div className="spd-main">
-          <ProductImage g={gallery[active]} className="spd-main__img" />
+          <ProductImage g={gallery[active]} src={active === 0 ? product.imageUrl : undefined} alt={product.name} className="spd-main__img" />
           <div className="spd-thumbs">
             {gallery.map((g, i) => (
               <button key={i} className={`spd-thumb${i === active ? ' is-active' : ''}`} onClick={() => setActive(i)}>
-                <ProductImage g={g} radius="8px" />
+                <ProductImage g={g} src={i === 0 ? product.imageUrl : undefined} alt={product.name} radius="8px" />
               </button>
             ))}
           </div>

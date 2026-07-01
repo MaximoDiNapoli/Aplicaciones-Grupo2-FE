@@ -25,6 +25,7 @@ export const toLocalItem = (product, qty) => ({
   price: product.price,
   qty,
   g: product.g,
+  imageUrl: product.imageUrl,
 })
 
 // Mapea un DetalleCarrito del backend al formato de ítem del carrito.
@@ -38,6 +39,7 @@ export const toBackendItem = (detalle) => {
     price: Number(detalle.precioUnitario ?? np.price ?? 0),
     qty: detalle.cantidad,
     g: np.g,
+    imageUrl: np.imageUrl,
   }
 }
 
@@ -55,6 +57,7 @@ export function buildCheckoutSummary(items, subtotal) {
       price: it.price * it.qty,
       unitPrice: it.price,
       g: it.g,
+      imageUrl: it.imageUrl,
     })),
     count: items.reduce((n, it) => n + it.qty, 0),
     subtotal,
