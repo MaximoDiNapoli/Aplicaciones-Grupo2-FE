@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import PublicStoreLayout from '../components/layout/PublicStoreLayout'
 import EmptyState from '../components/common/EmptyState'
 import SectionHeader from '../components/common/SectionHeader'
 import ProductGrid from '../components/product/ProductGrid'
-import { fetchProducts } from '../services/api'
+import { selectProducts } from '../features/products/productsSlice'
+import { loadProducts } from '../features/products/productsThunks'
 
-// Sin Resultados de búsqueda + recomendaciones (reales del backend).
+// Sin Resultados de búsqueda + recomendaciones (reales del backend, slice `products`).
 function NoResults() {
-  const [recommended, setRecommended] = useState([])
+  const dispatch = useDispatch()
+  const products = useSelector(selectProducts)
 
+  // Reutiliza el catálogo ya cargado en el store; solo pide al backend si está vacío.
   useEffect(() => {
-    let alive = true
-    fetchProducts()
-      .then((products) => { if (alive) setRecommended(products.slice(2, 6)) })
-      .catch(() => { if (alive) setRecommended([]) })
-    return () => { alive = false }
-  }, [])
+    if (!products.length) dispatch(loadProducts())
+  }, [dispatch, products.length])
+
+  const recommended = products.slice(2, 6)
 
   return (
     <PublicStoreLayout>

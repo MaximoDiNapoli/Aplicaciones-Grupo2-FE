@@ -10,7 +10,7 @@ import { formatPrice } from '../components/ui/Misc'
 import { useCart, buildCheckoutSummary } from '../store/cart'
 import { useCheckout } from '../store/checkout'
 import { createPurchaseThunk } from '../features/orders/ordersThunks'
-import { selectOrdersError, selectOrdersLoading } from '../features/orders/ordersSlice'
+import { clearOrdersError, selectOrdersError, selectOrdersLoading } from '../features/orders/ordersSlice'
 
 // Checkout paso 3: revisión final + creación real de la compra en el backend (thunk).
 function CheckoutSummary() {
@@ -23,6 +23,11 @@ function CheckoutSummary() {
   const orderError = useSelector(selectOrdersError)
   const summary = buildCheckoutSummary(items, subtotal)
   const { count, shipping, discount, total } = summary
+
+  // Al entrar, descarta cualquier error de compras previo para no mostrarlo de arrastre.
+  useEffect(() => {
+    dispatch(clearOrdersError())
+  }, [dispatch])
 
   // Sin dirección o método de pago, volvemos al paso correspondiente.
   useEffect(() => {

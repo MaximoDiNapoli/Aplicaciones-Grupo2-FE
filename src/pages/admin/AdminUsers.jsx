@@ -6,7 +6,6 @@ import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
 import { notify } from '../../features/ui/toastSlice'
-import { adminPaymentProviders } from '../../data/mock'
 import {
   selectUsers,
   selectUsersError,
@@ -18,21 +17,26 @@ import {
   loadUsers,
   updateUserThunk,
 } from '../../features/users/usersThunks'
+import { selectMetodosPago, selectMetodosPagoLoading } from '../../features/metodosPago/metodosPagoSlice'
+import { createMetodoPagoThunk, deleteMetodoPagoThunk, loadMetodosPago } from '../../features/metodosPago/metodosPagoThunks'
 
 const ROLES = ['COMPRADOR', 'VENDEDOR', 'ADMINISTRADOR']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Gestión de Usuarios + panel de Métodos de Pago (pasarelas, demo sin backend).
-// El listado/loading/error provienen del store de Redux (slice `users`).
+// Gestión de Usuarios + panel de Métodos de Pago (datos reales: /api/metodos-pago).
+// El listado/loading/error provienen del store de Redux (slices `users` y `metodosPago`).
 function AdminUsers() {
   const dispatch = useDispatch()
   const rawUsers = useSelector(selectUsers)
   const loading = useSelector(selectUsersLoading)
   const error = useSelector(selectUsersError)
+  const metodosPago = useSelector(selectMetodosPago)
+  const metodosLoading = useSelector(selectMetodosPagoLoading)
 
   const [q, setQ] = useState('')
   const [role, setRole] = useState('Todos los Roles')
-  const [providers, setProviders] = useState(adminPaymentProviders)
+  const [metodoForm, setMetodoForm] = useState({ tipo: '', descripcion: '' })
+  const [savingMetodo, setSavingMetodo] = useState(false)
   // form = null | { id?, nombre, email, telefono, rol, password }
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
@@ -40,7 +44,26 @@ function AdminUsers() {
 
   useEffect(() => {
     dispatch(loadUsers())
+    dispatch(loadMetodosPago())
   }, [dispatch])
+
+  const addMetodo = async (e) => {
+    e.preventDefault()
+    const tipo = metodoForm.tipo.trim()
+    if (!tipo) { dispatch(notify('El tipo del método de pago es obligatorio.')); return }
+    setSavingMetodo(true)
+    const action = await dispatch(createMetodoPagoThunk({ tipo, descripcion: metodoForm.descripcion.trim() }))
+    setSavingMetodo(false)
+    if (action.error) { dispatch(notify(action.payload || 'No se pudo crear el método de pago')); return }
+    dispatch(notify(`Método de pago "${tipo}" creado`))
+    setMetodoForm({ tipo: '', descripcion: '' })
+  }
+
+  const removeMetodo = async (id, tipo) => {
+    const action = await dispatch(deleteMetodoPagoThunk(id))
+    if (action.error) { dispatch(notify(action.payload || 'No se pudo eliminar el método de pago')); return }
+    dispatch(notify(`Método de pago "${tipo}" eliminado`))
+  }
 
   // Adapta los usuarios del backend al formato de la tabla.
   const users = useMemo(() => rawUsers.map((user) => ({
@@ -87,8 +110,6 @@ function AdminUsers() {
     }
     dispatch(notify(`Usuario ${name} eliminado`))
   }
-  const toggleProvider = (id) =>
-    setProviders((list) => list.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))
 
   const filtered = users.filter((u) => {
     const text = `${u.name} ${u.email} ${u.id}`.toLowerCase()
@@ -165,27 +186,32 @@ function AdminUsers() {
       <div className="dash-pagetitle" style={{ marginTop: 36 }}>
         <div>
           <h2 className="dash-pagetitle__title" style={{ fontSize: 26 }}>Métodos de Pago</h2>
-          <p className="dash-pagetitle__sub">Gestiona las pasarelas activas (demo: sin backend dedicado).</p>
+          <p className="dash-pagetitle__sub">Gestiona los métodos de pago disponibles (datos reales del backend).</p>
         </div>
       </div>
-      <div className="provider-grid">
-        {providers.map((p) => (
-          <section className={`provider-card${p.enabled ? '' : ' is-off'}`} key={p.id}>
-            <div className="provider-card__head">
-              <span className="provider-card__name"><Icon name="card" size={20} strokeFill /> {p.name}</span>
-              <button
-                type="button"
-                className={`toggle${p.enabled ? ' is-on' : ''}`}
-                aria-pressed={p.enabled}
-                aria-label={`${p.enabled ? 'Desactivar' : 'Activar'} ${p.name}`}
-                onClick={() => toggleProvider(p.id)}
-              >
-                <span className="toggle__knob" />
-              </button>
-            </div>
-            <div className="provider-card__state"><span className="adm-muted">Estado</span><Pill tone={p.enabled ? 'pink' : 'neutral'}>{p.enabled ? 'Activo' : 'Inactivo'}</Pill></div>
-          </section>
+
+      <form className="filter-fields" onSubmit={addMetodo} style={{ alignItems: 'flex-end' }}>
+        <TextInput label="Tipo *" placeholder="Ej. Tarjeta de crédito" value={metodoForm.tipo} onChange={(e) => setMetodoForm((f) => ({ ...f, tipo: e.target.value }))} />
+        <TextInput label="Descripción" placeholder="Opcional" value={metodoForm.descripcion} onChange={(e) => setMetodoForm((f) => ({ ...f, descripcion: e.target.value }))} />
+        <Button type="submit" iconLeft="plus" disabled={savingMetodo}>{savingMetodo ? 'Agregando...' : 'Agregar método'}</Button>
+      </form>
+
+      <div className="adm-table" style={{ marginTop: 12 }}>
+        <div className="adm-table__head" style={{ gridTemplateColumns: '0.6fr 1.6fr 3fr 0.8fr' }}>
+          <span>ID</span><span>Tipo</span><span>Descripción</span><span className="ta-right">Acciones</span>
+        </div>
+        {metodosLoading && <div className="adm-table__empty">Cargando métodos de pago...</div>}
+        {!metodosLoading && metodosPago.map((m) => (
+          <div className="adm-table__row" key={m.id} style={{ gridTemplateColumns: '0.6fr 1.6fr 3fr 0.8fr' }}>
+            <span className="adm-muted">{m.id}</span>
+            <span className="adm-cell-user"><Icon name="card" size={18} strokeFill /> <span className="adm-strong">{m.tipo}</span></span>
+            <span className="adm-muted">{m.descripcion || '—'}</span>
+            <span className="adm-actions ta-right">
+              <button className="icon-action" aria-label="Eliminar" onClick={() => removeMetodo(m.id, m.tipo)}><Icon name="trash" size={17} strokeFill /></button>
+            </span>
+          </div>
         ))}
+        {!metodosLoading && metodosPago.length === 0 && <div className="adm-table__empty">No hay métodos de pago cargados.</div>}
       </div>
     </AdminLayout>
   )

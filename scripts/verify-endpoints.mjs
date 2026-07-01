@@ -66,21 +66,6 @@ async function run() {
   const { loadCategories } = await import('../src/features/categories/categoriesThunks.js')
   const { loadUsers } = await import('../src/features/users/usersThunks.js')
   const { loadOrders } = await import('../src/features/orders/ordersThunks.js')
-  // Funciones legacy (siguen en api.js): fetchProducts/fetchProductById piden /api/categorias
-  // por dentro -> sirven para medir el comportamiento ANTERIOR (baseline).
-  const { fetchProducts, fetchProductById, fetchCategories } = await import('../src/services/api.js')
-
-  // Baseline informativo (no afecta el veredicto): reproduce el patrón ANTERIOR.
-  reset()
-  await Promise.all([fetchCategories(), fetchProducts()]) // antiguo loadCategories() + loadProducts()
-  const baselineCatalog = counts()
-  reset()
-  await Promise.all([fetchProductById(1), fetchProducts()]) // antiguo loadProductById() + loadProducts()
-  const baselineDetail = counts()
-  console.log('--- ANTES (baseline, patrón anterior) ---')
-  console.log('  Home/Catalog (loadCategories + loadProducts):', JSON.stringify(baselineCatalog))
-  console.log('  ProductDetail (loadProductById + loadProducts):', JSON.stringify(baselineDetail))
-  console.log('--- DESPUÉS (implementación actual) ---')
 
   const results = []
   // fn recibe un store fresco; expect = conteo máximo permitido por endpoint.

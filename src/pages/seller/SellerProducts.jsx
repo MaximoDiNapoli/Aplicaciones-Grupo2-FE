@@ -41,7 +41,7 @@ function SellerProducts() {
   const filtered = products.filter((p) => {
     if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false
     if (cat !== 'Todas' && p.category !== cat) return false
-    if (status !== 'Todos' && p.status !== status.toLowerCase()) return false
+    if (status !== 'Todos' && p.status !== status) return false
     return true
   })
   const { page, setPage, total, totalPages, slice, from, to } = usePager(filtered, 5, `${q}|${cat}|${status}`)

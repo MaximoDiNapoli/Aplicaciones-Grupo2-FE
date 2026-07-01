@@ -8,6 +8,8 @@ import productsReducer from '../features/products/productsSlice'
 import categoriesReducer from '../features/categories/categoriesSlice'
 import usersReducer from '../features/users/usersSlice'
 import ordersReducer from '../features/orders/ordersSlice'
+import resenasReducer from '../features/resenas/resenasSlice'
+import metodosPagoReducer from '../features/metodosPago/metodosPagoSlice'
 
 // Store global de la aplicación: un reducer por dominio funcional (feature).
 export const store = configureStore({
@@ -20,6 +22,8 @@ export const store = configureStore({
     categories: categoriesReducer,
     users: usersReducer,
     orders: ordersReducer,
+    resenas: resenasReducer,
+    metodosPago: metodosPagoReducer,
   },
 })
 

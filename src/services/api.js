@@ -91,8 +91,6 @@ function normalizeProduct(product, categoriesById = {}) {
     categoryName,
     price: finalPrice,
     oldPrice: hasDiscount ? price : product.oldPrice ?? null,
-    rating: product.rating ?? 4,
-    reviews: product.reviews ?? 0,
     badge: product.activo === false
       ? { tone: 'neutral', label: 'Inactivo' }
       : hasDiscount
@@ -124,26 +122,8 @@ export async function fetchCategories() {
   return categories.map((category, index) => normalizeCategory(category, index))
 }
 
-export async function fetchProducts(params = {}) {
-  const [categories, products] = await Promise.all([
-    fetchCategories().catch(() => []),
-    request('/api/productos', { params }),
-  ])
-  const categoriesById = Object.fromEntries(categories.map((category) => [category.id, category]))
-  return products.map((product) => normalizeProduct(product, categoriesById))
-}
-
-export async function fetchProductById(id) {
-  const [categories, product] = await Promise.all([
-    fetchCategories().catch(() => []),
-    request(`/api/productos/${id}`),
-  ])
-  const categoriesById = Object.fromEntries(categories.map((category) => [category.id, category]))
-  return normalizeProduct(product, categoriesById)
-}
-
-// Variantes "solo productos" (sin pedir /api/categorias): los thunks reutilizan las
-// categorías ya presentes en el store y normalizan con ellas, evitando GET redundantes.
+// Lectura de productos sin pedir /api/categorias: los thunks reutilizan las categorías
+// ya presentes en el store y normalizan con ellas, evitando GET redundantes.
 export async function fetchProductsOnly(params = {}) {
   return request('/api/productos', { params })
 }
@@ -182,6 +162,23 @@ export async function createAddress(payload, token) {
 
 export async function fetchPaymentMethods(token) {
   return request('/api/metodos-pago', { token })
+}
+
+export async function createPaymentMethod(payload, token) {
+  return request('/api/metodos-pago', { method: 'POST', body: payload, token })
+}
+
+export async function deletePaymentMethod(id, token) {
+  return request(`/api/metodos-pago/${id}`, { method: 'DELETE', token })
+}
+
+// Reseñas de producto (rating + comentario). GET público; POST solo COMPRADOR.
+export async function fetchResenas(productoId) {
+  return request('/api/resenas', { params: { producto: productoId } })
+}
+
+export async function createResena(payload, token) {
+  return request('/api/resenas', { method: 'POST', body: payload, token })
 }
 
 export async function fetchCarts(token) {

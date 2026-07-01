@@ -8,6 +8,27 @@
 
 ---
 
+## 0. Eliminación total de datos mock + features nuevas (última iteración)
+
+Se eliminó **todo** consumo de `src/data/mock.js` (archivo **borrado**). Lo que era mock ahora
+viene del backend, creando endpoints nuevos donde hacía falta:
+
+| Antes (mock) | Ahora (backend real) |
+|---|---|
+| `ProductDetail` reseñas fabricadas + `rating` fijo (4) | **Feature Reseñas nueva** en el backend (`/api/resenas`): entidad `Resena`, repo, service, controller, seguridad. El frontend lista reseñas reales y calcula el rating promedio; los COMPRADOR pueden publicar reseña. |
+| `AdminUsers` panel "pasarelas" (Stripe/PayPal toggles) | **Métodos de pago reales** (`/api/metodos-pago`, CRUD ya existente): listar + crear + eliminar (admin). |
+| `rating`/`reviews` inventados en `normalizeProduct` | Eliminados; el rating se **deriva de reseñas reales**. |
+| `data/mock.js` (~370 líneas) | **Archivo eliminado**. `git grep data/mock` → sin resultados. |
+
+Backend nuevo (perfil MySQL requiere crear la tabla `resena`; el perfil H2 la crea sola):
+`entity/Resena`, `repository/ResenaRepository`, `dto/ResenaRequest`, `dto/ResenaResponse`,
+`service/ResenaService(+Impl)`, `controller/ResenaController`, reglas en `SecurityConfig`
+(`GET /api/resenas` público, `POST /api/resenas` sólo COMPRADOR) y un `DataSeeder`
+(`@Profile("h2")`) que siembra admin/vendedor/comprador + catálogo para pruebas.
+
+También pulido: filtro de estado roto en `SellerProducts` (comparaba `'Activo'` vs `'activo'`),
+y error *stale* en `CheckoutSummary` (ahora se limpia al entrar con `clearOrdersError`).
+
 ## 1. Resumen
 
 | Verificación | Resultado |
@@ -201,13 +222,67 @@ navegador):
 - Backend `:8080` (perfil H2) — **UP**.
 - Frontend `:5173` (`npm run dev`) — **HTTP 200**, sirve la app contra el backend real.
 
-### 9.4 Limitación de los flujos admin/vendedor
-El backend solo permite **auto-registrarse como COMPRADOR**; crear usuarios `VENDEDOR`/
-`ADMINISTRADOR` exige un admin existente, y el perfil **H2 arranca sin datos semilla**. Por
-eso los flujos admin/vendedor (alta de productos/categorías, métricas con datos) se validaron
-a nivel de **existencia y seguridad de endpoint** (responden `403` sin admin) pero no con
-datos cargados. Para un e2e admin completo hay que **sembrar un admin** (vía el perfil MySQL
-con su `ecomerce_db` ya poblada, o un `data.sql` en H2). La lógica de derivación de métricas
-quedó verificada por build/lint y por su comportamiento con datos vacíos (muestra ceros y
-estados vacíos reales, sin romper).
+### 9.5 Pruebas exhaustivas de las features nuevas (backend H2 sembrado)
+
+Con el `DataSeeder` (admin/vendedor/comprador `@gmail.com`, password `123`, mismas credenciales
+que el seed de MySQL), se probó **por API** y por el **stack Redux del frontend**:
+
+```text
+SEED       categorias=2 · productos=2 · metodos-pago=2 · estados=4 · usuarios=3
+LOGIN      admin/vendedor/comprador -> token JWT (146) OK
+
+RESEÑAS
+  GET  /api/resenas?producto=1  (público)                 -> 200 []
+  POST /api/resenas sin auth                              -> 403
+  POST /api/resenas como ADMIN (no comprador)             -> 403
+  POST /api/resenas como COMPRADOR                        -> 201 {autorNombre:"Comprador Seed", ...}
+  POST /api/resenas producto inexistente                  -> 404
+  GET  /api/resenas?producto=1  (2 reseñas)               -> count=2 avg=4.5
+
+METODOS DE PAGO
+  GET  /api/metodos-pago (comprador)                      -> 200 [2]
+  POST /api/metodos-pago como COMPRADOR                   -> 403
+  POST /api/metodos-pago como ADMIN                       -> 201
+  DELETE /api/metodos-pago/{id} como ADMIN                -> 204
+
+PRODUCTOS (vendedor)
+  POST /api/productos (multipart)                         -> 201
+  PUT  /api/productos/{id}/imagen (multipart, el FIX)     -> 200  (producto editado OK)
+  PUT  /api/productos/{id} con multipart (endpoint JSON)  -> falla (confirma que el FIX era necesario)
+  DELETE /api/productos/{id}                              -> 204
+
+E2E Redux (scripts/verify-live.mjs) contra backend real:
+  [OK] loadCatalog()        categorias=2 productos=2
+  [OK] loadResenas(1)       count=2 avg=4.5
+  [OK] loginUser(comprador) rol=COMPRADOR
+  [OK] createResenaThunk()  total=3
+  [OK] loadMetodosPago()    metodos=2
+  [OK] loadOrders()         compras=0
+
+REDUNDANCIA (scripts/verify-endpoints.mjs)                -> 8/8 OK (sin regresión)
+```
+
+### 9.4 Flujos admin/vendedor (ahora sí probados)
+El backend solo permite **auto-registrarse como COMPRADOR** (crear `VENDEDOR`/`ADMINISTRADOR`
+exige un admin). Para poder probar esos flujos end-to-end se agregó el `DataSeeder`
+(`@Profile("h2")`) que crea un admin, un vendedor y un comprador (`@gmail.com`, password `123`)
+más catálogo y reseñas. Con eso se validaron **con datos reales**: alta/edición/baja de
+productos (vendedor), CRUD de métodos de pago (admin) y publicación de reseñas (comprador) — §9.5.
+
+> Nota MySQL: el perfil por defecto usa `ddl-auto=validate`. Se **agregó la tabla `Resena`** a
+> `Aplicaciones-Grupo2/bdd/init.sql` y datos de reseñas a `bdd/reset_seed_chocolateria_animales.sql`,
+> de modo que MySQL valida el esquema y queda poblado. El `DataSeeder` no corre en MySQL
+> (está acotado a `@Profile("h2")`).
+
+### 9.6 Issues extra encontrados y arreglados (llamadas innecesarias / limpieza)
+
+- **`CartEmpty` y `NoResults`** pedían el catálogo al backend cada vez (`fetchProducts`), aun si
+  ya estaba en el store. Ahora leen del slice `products` y **solo piden si está vacío** (reutilizan
+  la caché → cero llamadas al navegar desde el catálogo).
+- **`SellerDashboard`** usaba `fetchSellerProducts` **crudo** (sin normalizar) con estado local.
+  Migrado al slice `products`/`orders` (consistencia + sin estado duplicado).
+- **Código muerto eliminado**: `fetchProducts` y `fetchProductById` de `api.js` (las variantes que
+  pedían `/api/categorias` por dentro) ya no se usaban; se borraron.
+- **Fix pre-existente**: filtro de estado en `SellerProducts` (`'Activo'` vs `'activo'`).
+- **Fix**: error *stale* de compras en `CheckoutSummary` (se limpia al entrar).
 

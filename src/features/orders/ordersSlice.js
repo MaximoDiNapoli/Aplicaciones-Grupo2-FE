@@ -19,7 +19,12 @@ const initialState = {
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
-  reducers: {},
+  reducers: {
+    // Limpia el error del slice (p. ej. al entrar al checkout, para no mostrar un error previo).
+    clearOrdersError(state) {
+      state.error = null
+    },
+  },
   extraReducers: (builder) => {
     handleAsync(builder, loadOrders, (state, { payload }) => { state.items = payload })
     handleAsync(builder, loadOrderById, (state, { payload }) => { state.current = payload })
@@ -35,6 +40,8 @@ const ordersSlice = createSlice({
     })
   },
 })
+
+export const { clearOrdersError } = ordersSlice.actions
 
 export const selectOrders = (state) => state.orders.items
 export const selectCurrentOrder = (state) => state.orders.current
