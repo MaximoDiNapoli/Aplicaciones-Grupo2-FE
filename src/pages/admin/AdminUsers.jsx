@@ -5,6 +5,7 @@ import { TextInput, Select } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { notify } from '../../features/ui/toastSlice'
 import {
   selectUsers,
@@ -37,6 +38,8 @@ function AdminUsers() {
   const [role, setRole] = useState('Todos los Roles')
   const [metodoForm, setMetodoForm] = useState({ tipo: '', descripcion: '' })
   const [savingMetodo, setSavingMetodo] = useState(false)
+  // confirm = null | { title, message, onConfirm } -> modal de confirmación de borrado
+  const [confirm, setConfirm] = useState(null)
   // form = null | { id?, nombre, email, telefono, rol, password }
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
@@ -172,7 +175,7 @@ function AdminUsers() {
             <span><span className={`dot-status dot-status--${pillTone(u.status)}`} />{cap(u.status)}</span>
             <span className="adm-actions ta-right">
               <button className="icon-action" aria-label="Editar" onClick={() => openEdit(u)}><Icon name="pencil" size={17} strokeFill /></button>
-              <button className="icon-action" aria-label="Eliminar" onClick={() => removeUser(u.id, u.name)}><Icon name="trash" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Eliminar" onClick={() => setConfirm({ title: 'Eliminar usuario', message: `¿Seguro que querés eliminar a "${u.name}"? Esta acción no se puede deshacer.`, onConfirm: () => removeUser(u.id, u.name) })}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
         ))}
@@ -207,12 +210,20 @@ function AdminUsers() {
             <span className="adm-cell-user"><Icon name="card" size={18} strokeFill /> <span className="adm-strong">{m.tipo}</span></span>
             <span className="adm-muted">{m.descripcion || '—'}</span>
             <span className="adm-actions ta-right">
-              <button className="icon-action" aria-label="Eliminar" onClick={() => removeMetodo(m.id, m.tipo)}><Icon name="trash" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Eliminar" onClick={() => setConfirm({ title: 'Eliminar método de pago', message: `¿Seguro que querés eliminar el método de pago "${m.tipo}"?`, onConfirm: () => removeMetodo(m.id, m.tipo) })}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
         ))}
         {!metodosLoading && metodosPago.length === 0 && <div className="adm-table__empty">No hay métodos de pago cargados.</div>}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title={confirm?.title}
+        message={confirm?.message}
+        onConfirm={confirm?.onConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </AdminLayout>
   )
 }

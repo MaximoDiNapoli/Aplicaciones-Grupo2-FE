@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { SellerLayout, Pill, pillTone, cap } from '../../components/dashboard/shells'
 import ProductImage from '../../components/product/ProductImage'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import { formatPrice } from '../../components/ui/Misc'
@@ -19,6 +20,7 @@ function SellerProductDetail() {
   const error = useSelector(selectProductsError)
   const [active, setActive] = useState(0)
   const [prevId, setPrevId] = useState(id)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
     dispatch(loadProductById(id))
@@ -61,7 +63,7 @@ function SellerProductDetail() {
         </div>
         <div className="dash-pagetitle__actions">
           <Button variant="outline" to={`/vendedor/inventario/${product.id}/editar`} iconLeft="pencil">Editar</Button>
-          <Button variant="outline" iconLeft="trash" onClick={remove}>Eliminar</Button>
+          <Button variant="outline" iconLeft="trash" onClick={() => setConfirmOpen(true)}>Eliminar</Button>
         </div>
       </div>
 
@@ -95,6 +97,14 @@ function SellerProductDetail() {
           </section>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Eliminar producto"
+        message={`¿Seguro que querés eliminar "${product.name}"? Esta acción no se puede deshacer.`}
+        onConfirm={remove}
+        onClose={() => setConfirmOpen(false)}
+      />
     </SellerLayout>
   )
 }

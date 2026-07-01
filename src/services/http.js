@@ -36,7 +36,11 @@ http.interceptors.response.use(
       data?.error ||
       error.message ||
       'No fue posible completar la solicitud'
-    return Promise.reject(new Error(message))
+    const normalized = new Error(message)
+    // Conserva el status HTTP (si lo hay) para distinguir auth fallida (401/403)
+    // de errores de red. undefined => no hubo respuesta del servidor.
+    normalized.status = error.response?.status
+    return Promise.reject(normalized)
   },
 )
 

@@ -5,6 +5,7 @@ import { TextInput } from '../../components/ui/Field'
 import Button from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
 import Pagination, { usePager } from '../../components/ui/Pagination'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { notify } from '../../features/ui/toastSlice'
 import {
   selectCategories,
@@ -33,6 +34,8 @@ function AdminCategories() {
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+  // confirm = null | { title, message, onConfirm } -> modal de confirmación de borrado
+  const [confirm, setConfirm] = useState(null)
 
   // Categorías (para el CRUD) + productos (para los conteos) en una sola carga de categorías.
   useEffect(() => {
@@ -126,7 +129,7 @@ function AdminCategories() {
             <span className="adm-actions ta-right">
               <button className="icon-action" aria-label="Ver" onClick={() => dispatch(notify(`${c.count} productos en "${c.name}"`))}><Icon name="eye" size={18} strokeFill /></button>
               <button className="icon-action" aria-label="Editar" onClick={() => openEdit(c)}><Icon name="pencil" size={17} strokeFill /></button>
-              <button className="icon-action" aria-label="Eliminar" onClick={() => removeCat(c.id, c.name)}><Icon name="trash" size={17} strokeFill /></button>
+              <button className="icon-action" aria-label="Eliminar" onClick={() => setConfirm({ title: 'Eliminar categoría', message: `¿Seguro que querés eliminar la categoría "${c.name}"? Esta acción no se puede deshacer.`, onConfirm: () => removeCat(c.id, c.name) })}><Icon name="trash" size={17} strokeFill /></button>
             </span>
           </div>
         ))}
@@ -136,6 +139,14 @@ function AdminCategories() {
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title={confirm?.title}
+        message={confirm?.message}
+        onConfirm={confirm?.onConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </AdminLayout>
   )
 }
