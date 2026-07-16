@@ -12,7 +12,6 @@ import { ToastViewport } from './store/toast'
 // CartProvider ya no aporta estado: sólo sincroniza el carrito con el backend al cambiar la sesión.
 // ToastViewport renderiza la pila de notificaciones leyendo del slice `toast`.
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
         <CartProvider>
@@ -21,5 +20,4 @@ createRoot(document.getElementById('root')).render(
         </CartProvider>
       </BrowserRouter>
     </Provider>
-  </StrictMode>,
 )
